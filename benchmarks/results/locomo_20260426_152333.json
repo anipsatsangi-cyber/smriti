@@ -1,0 +1,66 @@
+{
+  "benchmark": "locomo",
+  "timestamp": "2026-04-26T15:23:33.742572",
+  "metrics": {
+    "average_score": 1.0,
+    "total_tasks": 4
+  },
+  "results": [
+    {
+      "task_id": "session_001_0",
+      "query": "What is the name of the memory engine the user mentioned?",
+      "retrieved_context": "user: Exactly. Also, my favorite programming language is Rust because of its safety guarantees.\nuser: It uses a dual-store memory architecture called Smriti, inspired by the Hippocampus and Neocortex.\nassistant: Ah, like Complementary Learning Systems. Very cool.\nassistant: That sounds interesting! What makes CodeGraph unique?\nuser: Hi, I'm working on a project called CodeGraph. It's a new code intelligence platform.",
+      "ground_truth": "Smriti",
+      "score": 1.0,
+      "metadata": {
+        "question_type": "fact_extraction"
+      },
+      "recall_stats": {
+        "hits": 5,
+        "tokens_used": 102
+      }
+    },
+    {
+      "task_id": "session_001_1",
+      "query": "What programming language does the user prefer?",
+      "retrieved_context": "user: Exactly. Also, my favorite programming language is Rust because of its safety guarantees.\nassistant: That sounds interesting! What makes CodeGraph unique?\nuser: Hi, I'm working on a project called CodeGraph. It's a new code intelligence platform.\nuser: It uses a dual-store memory architecture called Smriti, inspired by the Hippocampus and Neocortex.\nassistant: Ah, like Complementary Learning Systems. Very cool.\nuser: Exactly. Also, my favorite programming language is Rust because of its safety guarantees.\nuser: Hi, I'm working on a project called CodeGraph. It's a new code intelligence platform.\nuser: It uses a dual-store memory architecture called Smriti, inspired by the Hippocampus and Neocortex.\nassistant: That sounds interesting! What makes CodeGraph unique?\nassistant: Ah, like Complementary Learning Systems. Very cool.",
+      "ground_truth": "Rust",
+      "score": 1.0,
+      "metadata": {
+        "question_type": "preference"
+      },
+      "recall_stats": {
+        "hits": 10,
+        "tokens_used": 204
+      }
+    },
+    {
+      "task_id": "session_002_2",
+      "query": "Where is the user's database hosted?",
+      "retrieved_context": "user: Yesterday I tried to deploy the API to AWS, but we got rate limited by the database.\nuser: No, we use a managed Postgres cluster on Neon. We'll need to increase the connection pool size.\nassistant: Rate limits can be frustrating. Are you using RDS?\nuser: Exactly. Also, my favorite programming language is Rust because of its safety guarantees.\nuser: It uses a dual-store memory architecture called Smriti, inspired by the Hippocampus and Neocortex.\nassistant: Ah, like Complementary Learning Systems. Very cool.\nuser: Hi, I'm working on a project called CodeGraph. It's a new code intelligence platform.\nassistant: That sounds interesting! What makes CodeGraph unique?\nuser: Exactly. Also, my favorite programming language is Rust because of its safety guarantees.\nuser: It uses a dual-store memory architecture called Smriti, inspired by the Hippocampus and Neocortex.\nuser: Hi, I'm working on a project called CodeGraph. It's a new code intelligence platform.\nassistant: Ah, like Complementary Learning Systems. Very cool.\nassistant: That sounds interesting! What makes CodeGraph unique?",
+      "ground_truth": "Neon",
+      "score": 1.0,
+      "metadata": {
+        "question_type": "fact_extraction"
+      },
+      "recall_stats": {
+        "hits": 13,
+        "tokens_used": 266
+      }
+    },
+    {
+      "task_id": "session_002_3",
+      "query": "Why did the deployment fail yesterday?",
+      "retrieved_context": "user: Yesterday I tried to deploy the API to AWS, but we got rate limited by the database.\nassistant: Rate limits can be frustrating. Are you using RDS?\nuser: No, we use a managed Postgres cluster on Neon. We'll need to increase the connection pool size.\nuser: Exactly. Also, my favorite programming language is Rust because of its safety guarantees.\nassistant: Ah, like Complementary Learning Systems. Very cool.\nuser: It uses a dual-store memory architecture called Smriti, inspired by the Hippocampus and Neocortex.\nuser: Hi, I'm working on a project called CodeGraph. It's a new code intelligence platform.\nassistant: That sounds interesting! What makes CodeGraph unique?\nuser: Yesterday I tried to deploy the API to AWS, but we got rate limited by the database.\nuser: No, we use a managed Postgres cluster on Neon. We'll need to increase the connection pool size.\nassistant: Rate limits can be frustrating. Are you using RDS?\nuser: Exactly. Also, my favorite programming language is Rust because of its safety guarantees.\nassistant: Ah, like Complementary Learning Systems. Very cool.\nuser: It uses a dual-store memory architecture called Smriti, inspired by the Hippocampus and Neocortex.\nuser: Hi, I'm working on a project called CodeGraph. It's a new code intelligence platform.\nassistant: That sounds interesting! What makes CodeGraph unique?",
+      "ground_truth": "rate limited",
+      "score": 1.0,
+      "metadata": {
+        "question_type": "event_recall"
+      },
+      "recall_stats": {
+        "hits": 16,
+        "tokens_used": 328
+      }
+    }
+  ]
+}

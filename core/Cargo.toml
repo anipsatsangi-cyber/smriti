@@ -1,0 +1,90 @@
+[package]
+name = "smriti"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Smriti — structured memory engine for AI agents (CLS dual-store + HDC composition + predictive coding)"
+
+# Two crate types so the same source can compile to a WASM `cdylib` (for
+# wasm-pack) and a regular Rust `rlib` (for the native binary path).
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Core algorithms — pure Rust, no system deps.
+petgraph = { version = "0.6", features = ["serde-1"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+tiktoken-rs = "0.6"
+
+# uuid + chrono need extra features under WASM (see target table below).
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Native-only persistence (SQLite). Optional, gated on the `native` feature.
+rusqlite = { version = "0.32", features = ["bundled"], optional = true }
+
+# HTTP server (gated on the `http` feature so the core stays light)
+axum = { version = "0.8", features = ["json"], optional = true }
+tokio = { version = "1", features = ["full"], optional = true }
+tower-http = { version = "0.6", features = ["cors", "trace"], optional = true }
+tracing = { version = "0.1", optional = true }
+
+# Optional embeddings layer (gated on `embeddings` feature). Adds ~80MB on
+# first use (downloads MiniLM model). Off by default; the zero-ML build
+# stays the canonical configuration.
+fastembed = { version = "5", optional = true }
+
+# WASM-specific dependencies — only compiled when target_arch = "wasm32".
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+# `getrandom` with the "js" feature lets uuid::Uuid::new_v4() work in
+# the browser by routing through the Web Crypto API.
+getrandom = { version = "0.2", features = ["js"] }
+# `chrono` needs `wasmbind` to read the system time from JavaScript.
+chrono = { version = "0.4", features = ["serde", "wasmbind"] }
+# `uuid` needs the `js` feature so v4 generation works in the browser.
+uuid = { version = "1", features = ["v4", "serde", "js"] }
+# Console logging from WASM
+console_error_panic_hook = { version = "0.1", optional = true }
+
+[features]
+# Default = native build with SQLite. Strip `native` for WASM.
+default = ["native"]
+native = ["dep:rusqlite"]
+http = ["dep:axum", "dep:tokio", "dep:tower-http", "dep:tracing"]
+embeddings = ["dep:fastembed"]
+# WASM-friendly diagnostics
+wasm-debug = ["dep:console_error_panic_hook"]
+
+[dev-dependencies]
+tempfile = "3"
+
+# The benchmark binary uses native-only APIs (Smriti::open backed by SQLite).
+# Declared explicitly so it is skipped on WASM builds.
+[[bin]]
+name = "smriti-bench"
+path = "src/bin/smriti-bench.rs"
+required-features = ["native"]
+
+# Large-scale benchmark: 200 memories, 50 queries, paraphrase-heavy.
+# Shows the honest delta between zero-ML and embeddings configurations.
+[[bin]]
+name = "smriti-bench-large"
+path = "src/bin/smriti-bench-large.rs"
+required-features = ["native"]
+
+# 500-memory stress benchmark: same queries but with 411 noise memories
+# added to stress retrieval precision at production-realistic scale.
+[[bin]]
+name = "smriti-bench-500"
+path = "src/bin/smriti-bench-500.rs"
+required-features = ["native"]
+
+[[bin]]
+name = "smriti-http"
+path = "src/bin/smriti-http.rs"
+required-features = ["native", "http"]

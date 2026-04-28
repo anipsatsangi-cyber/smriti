@@ -1,0 +1,64 @@
+{
+  "benchmark": "longmemeval",
+  "timestamp": "2026-04-27T16:11:53.922204+00:00",
+  "metrics": {
+    "average_score": 0.5,
+    "total_tasks": 2,
+    "total_tokens_used": 131,
+    "average_tokens_used": 65.5,
+    "token_per_correct_answer": 131.0,
+    "total_duplicate_hits": 0,
+    "average_duplicate_hit_rate": 0.0
+  },
+  "results": [
+    {
+      "task_id": "longmem_001_0",
+      "query": "Which cloud provider is the user planning to migrate to, and why?",
+      "retrieved_context": "user: Assistant: What's the main driver for migrating to GCP?\nuser: User: We use EKS, but we're thinking of migrating to GCP next year.\nuser: User: It's mainly for their BigQuery and data analytics tools.\nuser: User: Our main infrastructure is deployed on AWS.\nuser: Assistant: Got it. Do you use ECS or EKS?",
+      "retrieved_context_lines": [
+        "user: Assistant: What's the main driver for migrating to GCP?",
+        "user: User: We use EKS, but we're thinking of migrating to GCP next year.",
+        "user: User: It's mainly for their BigQuery and data analytics tools.",
+        "user: User: Our main infrastructure is deployed on AWS.",
+        "user: Assistant: Got it. Do you use ECS or EKS?"
+      ],
+      "ground_truth": "GCP, for BigQuery and data analytics.",
+      "score": 0.0,
+      "metadata": {
+        "category": "future_plans"
+      },
+      "recall_stats": {
+        "hits": 5,
+        "tokens_used": 74,
+        "unique_hits": 5,
+        "duplicate_hits": 0,
+        "duplicate_hit_rate": 0.0,
+        "tokens_per_correct_answer": null
+      }
+    },
+    {
+      "task_id": "longmem_002_1",
+      "query": "What is the final name of the user's puppy?",
+      "retrieved_context": "user: User: I just adopted a puppy!\nuser: User: Actually, wait, my partner wanted to change his name to Cooper. So he is Cooper now.\nuser: Assistant: Congratulations! What breed is it?\nuser: User: He's a Golden Retriever. I named him Max.",
+      "retrieved_context_lines": [
+        "user: User: I just adopted a puppy!",
+        "user: User: Actually, wait, my partner wanted to change his name to Cooper. So he is Cooper now.",
+        "user: Assistant: Congratulations! What breed is it?",
+        "user: User: He's a Golden Retriever. I named him Max."
+      ],
+      "ground_truth": "Cooper",
+      "score": 1.0,
+      "metadata": {
+        "category": "knowledge_update"
+      },
+      "recall_stats": {
+        "hits": 4,
+        "tokens_used": 57,
+        "unique_hits": 4,
+        "duplicate_hits": 0,
+        "duplicate_hit_rate": 0.0,
+        "tokens_per_correct_answer": 57.0
+      }
+    }
+  ]
+}

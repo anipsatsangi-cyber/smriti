@@ -1,0 +1,38 @@
+{
+  "benchmark": "longmemeval",
+  "timestamp": "2026-04-26T15:38:30.501932",
+  "metrics": {
+    "average_score": 0.5,
+    "total_tasks": 2
+  },
+  "results": [
+    {
+      "task_id": "longmem_001_0",
+      "query": "Which cloud provider is the user planning to migrate to, and why?",
+      "retrieved_context": "user: User: It's mainly for their BigQuery and data analytics tools.\nuser: User: We use EKS, but we're thinking of migrating to GCP next year.\nuser: Assistant: What's the main driver for migrating to GCP?\nuser: Assistant: Got it. Do you use ECS or EKS?\nuser: User: Our main infrastructure is deployed on AWS.",
+      "ground_truth": "GCP, for BigQuery and data analytics.",
+      "score": 0.0,
+      "metadata": {
+        "category": "future_plans"
+      },
+      "recall_stats": {
+        "hits": 5,
+        "tokens_used": 74
+      }
+    },
+    {
+      "task_id": "longmem_002_1",
+      "query": "What is the final name of the user's puppy?",
+      "retrieved_context": "user: User: Actually, wait, my partner wanted to change his name to Cooper. So he is Cooper now.\nuser: Assistant: Max is a great name for a Golden Retriever.\nuser: Assistant: Congratulations! What breed is it?\nuser: User: We use EKS, but we're thinking of migrating to GCP next year.\nuser: User: I just adopted a puppy!\nuser: User: He's a Golden Retriever. I named him Max.\nuser: User: It's mainly for their BigQuery and data analytics tools.\nuser: Assistant: What's the main driver for migrating to GCP?\nuser: Assistant: Got it. Do you use ECS or EKS?\nuser: User: Our main infrastructure is deployed on AWS.",
+      "ground_truth": "Cooper",
+      "score": 1.0,
+      "metadata": {
+        "category": "knowledge_update"
+      },
+      "recall_stats": {
+        "hits": 10,
+        "tokens_used": 146
+      }
+    }
+  ]
+}

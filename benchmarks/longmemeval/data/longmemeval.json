@@ -1,0 +1,32 @@
+[
+  {
+    "id": "longmem_001",
+    "context": [
+      "User: Our main infrastructure is deployed on AWS.",
+      "Assistant: Got it. Do you use ECS or EKS?",
+      "User: We use EKS, but we're thinking of migrating to GCP next year.",
+      "Assistant: What's the main driver for migrating to GCP?",
+      "User: It's mainly for their BigQuery and data analytics tools."
+    ],
+    "qa": {
+      "question": "Which cloud provider is the user planning to migrate to, and why?",
+      "answer": "GCP, for BigQuery and data analytics.",
+      "category": "future_plans"
+    }
+  },
+  {
+    "id": "longmem_002",
+    "context": [
+      "User: I just adopted a puppy!",
+      "Assistant: Congratulations! What breed is it?",
+      "User: He's a Golden Retriever. I named him Max.",
+      "Assistant: Max is a great name for a Golden Retriever.",
+      "User: Actually, wait, my partner wanted to change his name to Cooper. So he is Cooper now."
+    ],
+    "qa": {
+      "question": "What is the final name of the user's puppy?",
+      "answer": "Cooper",
+      "category": "knowledge_update"
+    }
+  }
+]

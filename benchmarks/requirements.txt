@@ -1,0 +1,5 @@
+datasets>=2.19.0
+evalplus>=0.3.0
+scikit-learn>=1.4.0
+tqdm>=4.66.0
+smriti>=0.1.0

@@ -1,0 +1,68 @@
+[
+  {
+    "id": "session_001",
+    "history": [
+      {
+        "role": "user",
+        "content": "Hi, I'm working on a project called CodeGraph. It's a new code intelligence platform."
+      },
+      {
+        "role": "assistant",
+        "content": "That sounds interesting! What makes CodeGraph unique?"
+      },
+      {
+        "role": "user",
+        "content": "It uses a dual-store memory architecture called Smriti, inspired by the Hippocampus and Neocortex."
+      },
+      {
+        "role": "assistant",
+        "content": "Ah, like Complementary Learning Systems. Very cool."
+      },
+      {
+        "role": "user",
+        "content": "Exactly. Also, my favorite programming language is Rust because of its safety guarantees."
+      }
+    ],
+    "qa_pairs": [
+      {
+        "query": "What is the name of the memory engine the user mentioned?",
+        "answer": "Smriti",
+        "type": "fact_extraction"
+      },
+      {
+        "query": "What programming language does the user prefer?",
+        "answer": "Rust",
+        "type": "preference"
+      }
+    ]
+  },
+  {
+    "id": "session_002",
+    "history": [
+      {
+        "role": "user",
+        "content": "Yesterday I tried to deploy the API to AWS, but we got rate limited by the database."
+      },
+      {
+        "role": "assistant",
+        "content": "Rate limits can be frustrating. Are you using RDS?"
+      },
+      {
+        "role": "user",
+        "content": "No, we use a managed Postgres cluster on Neon. We'll need to increase the connection pool size."
+      }
+    ],
+    "qa_pairs": [
+      {
+        "query": "Where is the user's database hosted?",
+        "answer": "Neon",
+        "type": "fact_extraction"
+      },
+      {
+        "query": "Why did the deployment fail yesterday?",
+        "answer": "rate limited",
+        "type": "event_recall"
+      }
+    ]
+  }
+]

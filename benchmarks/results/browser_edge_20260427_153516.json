@@ -1,0 +1,26 @@
+{
+  "benchmark": "browser_edge",
+  "timestamp": "2026-04-27T15:35:15.932128+00:00",
+  "environment": {
+    "python": "3.13.5",
+    "platform": "darwin",
+    "warm_runs": 25,
+    "budget": 500
+  },
+  "artifacts": {
+    "wasm_path": "/Users/arvind/codebase/smriti/target/wasm32-unknown-unknown/release/smriti.wasm",
+    "wasm_present": true,
+    "wasm_bytes": 766418,
+    "wasm_gzip_bytes": 215685
+  },
+  "metrics": {
+    "cold_recall_ms": 7.291333982720971,
+    "cold_tokens_used": 75,
+    "remember_avg_ms": 5.223746586125344,
+    "warm_recall_avg_ms": 4.44153843447566,
+    "warm_recall_p95_ms": 5.937950685620306,
+    "avg_tokens_used": 60.2,
+    "avg_hits": 4,
+    "avg_duplicate_hit_rate": 0.0
+  }
+}
