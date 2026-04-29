@@ -6,30 +6,30 @@
 
 :root {
   /* Backgrounds */
-  --bg: #030303;
-  --bg-soft: #0a0a0a;
-  --bg-card: rgba(15, 15, 15, 0.6);
-  --bg-card-hi: rgba(25, 25, 25, 0.7);
-  --border: rgba(255, 255, 255, 0.06);
-  --border-soft: rgba(255, 255, 255, 0.03);
+  --bg: #030308;
+  --bg-soft: #08081a;
+  --bg-card: rgba(12, 12, 28, 0.65);
+  --bg-card-hi: rgba(20, 18, 40, 0.75);
+  --border: rgba(130, 120, 255, 0.08);
+  --border-soft: rgba(130, 120, 255, 0.04);
 
   /* Text */
-  --t1: #f4f4f5;
-  --t2: #a1a1aa;
-  --t3: #52525b;
+  --t1: #eeeef2;
+  --t2: #9d9db8;
+  --t3: #5a5a78;
 
-  /* Brand — Subtle Premium Monochrome with soft glow */
-  --accent: #ffffff;
-  --accent-bright: #e4e4e7;
-  --accent-glow: rgba(255, 255, 255, 0.15);
-  --accent-2: #71717a;
-  --accent-2-glow: rgba(113, 113, 122, 0.15);
+  /* Brand — Deep indigo/violet (Indian night-sky) with subtle warmth */
+  --accent: #a78bfa;
+  --accent-bright: #c4b5fd;
+  --accent-glow: rgba(167, 139, 250, 0.12);
+  --accent-2: #7c6cc4;
+  --accent-2-glow: rgba(124, 108, 196, 0.12);
 
-  --gradient: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
+  --gradient: linear-gradient(135deg, #c4b5fd 0%, #818cf8 50%, #6366f1 100%);
   --gradient-soft: linear-gradient(135deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(161, 161, 170, 0.02),
-    rgba(255, 255, 255, 0.01));
+    rgba(167, 139, 250, 0.06),
+    rgba(99, 102, 241, 0.03),
+    rgba(129, 140, 248, 0.02));
 
   --green: #34d399;
   --yellow: #fbbf24;
@@ -59,7 +59,7 @@ body {
   min-height: 100vh;
 }
 
-/* Subtle radial glow behind everything */
+/* Subtle radial glow behind everything — indigo ambient */
 body::before {
   content: "";
   position: fixed;
@@ -67,8 +67,8 @@ body::before {
   pointer-events: none;
   z-index: -2;
   background:
-    radial-gradient(ellipse 60% 40% at 30% 0%, rgba(255, 255, 255, 0.03), transparent 60%),
-    radial-gradient(ellipse 80% 50% at 70% 100%, rgba(255, 255, 255, 0.02), transparent 60%);
+    radial-gradient(ellipse 60% 40% at 30% 0%, rgba(99, 102, 241, 0.06), transparent 60%),
+    radial-gradient(ellipse 80% 50% at 70% 100%, rgba(167, 139, 250, 0.04), transparent 60%);
 }
 
 #particles {
@@ -544,7 +544,7 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
   transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
 }
 .slider-card:hover {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(167, 139, 250, 0.35);
   background: var(--bg-card-hi);
   box-shadow: 0 0 36px var(--accent-glow);
   transform: translateY(-4px);
@@ -557,6 +557,8 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
   background: none;
   border: none;
   box-shadow: none;
+  opacity: 1;
+  transform: none;
 }
 .bench-card:hover {
   border-color: transparent;
@@ -568,7 +570,7 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
 .why-num {
   font-family: var(--mono);
   font-size: 0.86rem;
-  color: var(--accent);
+  color: var(--accent-bright);
   font-weight: 700;
   margin-bottom: 12px;
 }
@@ -605,8 +607,8 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
 }
 .bench-table tr:last-child td { border-bottom: 0; }
 .bench-table tr.us { background: linear-gradient(90deg,
-  rgba(255, 255, 255, 0.08),
-  rgba(255, 255, 255, 0.03));
+  rgba(99, 102, 241, 0.12),
+  rgba(167, 139, 250, 0.04));
 }
 .bench-table tr.us strong { color: var(--accent-bright); }
 .pill {
@@ -627,14 +629,27 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
   text-align: center;
 }
 
-/* ── Science ── */
+/* ── Science (horizontal slider) ── */
 
 .science-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
+  overflow-x: auto;
   gap: 16px;
+  padding-bottom: 20px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167, 139, 250, 0.2) transparent;
+}
+.science-grid::-webkit-scrollbar { height: 6px; }
+.science-grid::-webkit-scrollbar-track { background: transparent; }
+.science-grid::-webkit-scrollbar-thumb {
+  background-color: rgba(167, 139, 250, 0.2);
+  border-radius: 6px;
 }
 .paper {
+  flex: 0 0 300px;
+  scroll-snap-align: start;
   background: var(--bg-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -647,11 +662,11 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
     border-color 0.25s var(--ease);
 }
 .paper[data-reveal].revealed { opacity: 1; transform: translateY(0); }
-.paper:hover { border-color: rgba(255, 255, 255, 0.35); }
+.paper:hover { border-color: rgba(167, 139, 250, 0.3); }
 .paper-year {
   font-family: var(--mono);
   font-size: 0.78rem;
-  color: var(--accent-2);
+  color: var(--accent);
   font-weight: 700;
   margin-bottom: 6px;
 }
@@ -664,7 +679,7 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
 }
 .paper-author {
   font-size: 0.85rem;
-  color: var(--t2);
+  color: var(--accent-bright);
   font-style: italic;
   margin-bottom: 12px;
 }
