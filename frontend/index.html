@@ -134,9 +134,9 @@
     <span class="tag">Why Smriti</span>
     <h2>Core design principles of the Smriti engine.</h2>
   </div>
-  <div class="why-grid">
+  <div class="slider-grid">
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">01</div>
       <h3>Zero ML dependencies</h3>
       <p>Most memory engines require a dense embedding model. Smriti doesn't. Our HDC binary
@@ -144,7 +144,7 @@
       download, no inference latency.</p>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">02</div>
       <h3>Two stores, like the brain</h3>
       <p>The hippocampus learns fast and forgets. The neocortex consolidates slowly
@@ -152,7 +152,7 @@
       Smriti finally brings this cognitive architecture to production.</p>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">03</div>
       <h3>Algebra, not search</h3>
       <p>Bind two concepts with XOR. Bundle 50 facts into one 256-byte hypervector.
@@ -160,7 +160,7 @@
       Our moat is mathematical.</p>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">04</div>
       <h3>Open wire protocol</h3>
       <p>Instead of proprietary APIs, Smriti speaks <strong>SMRP/1.0</strong>,
@@ -168,7 +168,7 @@
       over vendor lock-in.</p>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">05</div>
       <h3>Token efficiency, by design</h3>
       <p>Memory should be inexpensive. By utilizing zero-ML retrieval and rigorous 
@@ -176,7 +176,7 @@
       without sacrificing retrieval accuracy.</p>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">06</div>
       <h3>One binary, runs anywhere</h3>
       <p>Native Linux/macOS/Windows. WASM-ready architecture for the browser.
@@ -198,7 +198,10 @@
   </div>
 
   <!-- Smriti's own three-layer benchmark, no fictional competitors -->
-  <div class="bench-table">
+  <div class="slider-grid" style="padding-top: 1rem;">
+  
+  <div class="slider-card bench-card">
+    <div class="bench-table">
     <h3 style="margin-bottom: 1rem;">bench-500 · 500 memories, 47 + 12 abstain queries</h3>
     <table>
       <thead>
@@ -246,9 +249,11 @@
       or <code>SMRITI_BENCH_EMBEDDINGS=1 cargo run --release --bin smriti-bench-500 --features embeddings</code> (with embeddings).
     </p>
   </div>
+  </div>
 
   <!-- Real public benchmarks, LLM-judged via NVIDIA NIM Llama-3.3-70B -->
-  <div class="bench-table" style="margin-top: 3rem;">
+  <div class="slider-card bench-card">
+    <div class="bench-table">
     <h3 style="margin-bottom: 1rem;">Public benchmarks · LLM-as-judge (Llama-3.3-70B)</h3>
     <table>
       <thead>
@@ -290,9 +295,11 @@
       and reasons in <code>benchmarks/results/REAL_DATASETS_REPORT.md</code>.
     </p>
   </div>
+  </div>
 
   <!-- What Smriti gives that vector stores structurally cannot -->
-  <div class="bench-table" style="margin-top: 3rem;">
+  <div class="slider-card bench-card">
+    <div class="bench-table">
     <h3 style="margin-bottom: 1rem;">Capabilities a vector store cannot offer</h3>
     <table>
       <thead>
@@ -350,6 +357,8 @@
       LongMemEval and LOCOMO is on the v0.3 roadmap — the harness already
       runs against any system that exposes <code>(corpus, query) → context</code>.
     </p>
+  </div>
+  </div>
   </div>
 </section>
 
@@ -410,6 +419,7 @@
     No embedding model. No network calls after the first load.
     The same binary ships natively at 88.9% top-1 on LongMemEval.</p>
   </div>
+  </div>
 
   <div class="demo-shell">
     <div class="demo-controls">
@@ -451,9 +461,10 @@
     <h2>Cognitive primitives, not just search.</h2>
     <p>Everything listed here works <strong>without an LLM in the loop</strong>. Smriti performs the graph algebra natively, keeping your agent fast and deterministic.</p>
   </div>
-  <div class="why-grid">
+  </div>
+  <div class="slider-grid">
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">01</div>
       <h3>Confidence Verdicts</h3>
       <p>Smriti knows when it doesn't know. It returns a verdict (Confident, Ambiguous, Unsupported, Abstained). In our benchmarks, it correctly abstains on 91.7% of adversarial queries instead of hallucinating nearest-neighbors.</p>
@@ -463,35 +474,35 @@
 }</code></pre>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">02</div>
       <h3>Causal Trajectory Replay</h3>
       <p>Memories aren't isolated. They are connected by typed edges (CausedBy, Before, Supersedes). You can reconstruct episodic narratives exactly as they unfolded via graph traversal.</p>
       <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>smriti.recall_trajectory(id, Causal)</code></pre>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">03</div>
       <h3>Salience & Decay Bypass</h3>
       <p>Not all memories are equal. Trivial facts decay exponentially. Memories marked as <code>Critical</code> bypass decay and act as permanent PageRank seeds, keeping related context warm.</p>
       <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>memory.salience(Salience::Critical)</code></pre>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">04</div>
       <h3>Goal-Pinned Priming</h3>
       <p>Memory isn't just past events. By storing a <code>MemoryKind::Goal</code>, the engine actively routes spreading activation towards nodes that help satisfy the agent's current objective.</p>
       <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>smriti.remember("Fix bug").kind(Goal)</code></pre>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">05</div>
       <h3>Contradiction & Supersede</h3>
       <p>When facts change, the old memory isn't deleted—it's gracefully superseded. The contradiction is preserved in the graph as an audit trail, but standard recall only surfaces the live truth.</p>
       <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>smriti.supersede(old_id, "Use OAuth2")</code></pre>
     </div>
 
-    <div class="why-card" data-reveal>
+    <div class="slider-card" data-reveal>
       <div class="why-num">06</div>
       <h3>Predictive Coding (MDL)</h3>
       <p>If your existing memory already predicts the new input, Smriti refuses to store it. This Friston-style surprise filter prevents redundancy and keeps the graph dense and fast.</p>
@@ -512,6 +523,7 @@ smriti.consolidate()</code></pre>
       into your agent's MCP config and the engine's primitives become
       first-class tools. No wrapper, no glue code, no embedding pipeline.
     </p>
+  </div>
   </div>
 
   <div class="install-grid" style="grid-template-columns: 1fr 1fr; align-items: start;">
