@@ -31,6 +31,22 @@ use crate::core::hdc::{fingerprint, Hypervector};
 use crate::node::{MemoryEdge, MemoryNode};
 use crate::scope::Scope;
 
+// WASM-safe Instant: std::time::Instant panics on wasm32.
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Clone, Copy)]
+struct Instant;
+
+#[cfg(target_arch = "wasm32")]
+impl Instant {
+    fn now() -> Self { Self }
+    fn duration_since(&self, _earlier: Self) -> std::time::Duration {
+        std::time::Duration::from_secs(0)
+    }
+}
+
 /// Damping factor for PPR. 0.85 is the standard value (Brin & Page 1998).
 const PPR_DAMPING: f32 = 0.85;
 
@@ -50,7 +66,7 @@ pub struct Neocortex {
     /// rapid-fire queries (bench harness, test loops) don't accumulate
     /// residual priming the way they would in the human-scale agent loop
     /// the priming model was designed for. `None` until the first recall.
-    last_decay_at: std::sync::RwLock<Option<std::time::Instant>>,
+    last_decay_at: std::sync::RwLock<Option<Instant>>,
 }
 
 impl Neocortex {
@@ -397,7 +413,7 @@ impl Neocortex {
         const HALF_LIFE_SECS: f32 = 30.0;
         const MIN_DECAY_FACTOR: f32 = 0.05;
 
-        let now = std::time::Instant::now();
+        let now = Instant::now();
         let mut last = self.last_decay_at.write().unwrap();
         let elapsed_secs = match *last {
             Some(prev) => now.duration_since(prev).as_secs_f32(),
