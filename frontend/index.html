@@ -25,6 +25,7 @@
     <a href="#bench">Benchmark</a>
     <a href="#science">Science</a>
     <a href="#demo">Demo</a>
+    <a href="#capabilities">Capabilities</a>
     <a href="#mcp">MCP</a>
     <a href="#install">Install</a>
     <a href="https://github.com/fork-demon/smriti" target="_blank" rel="noopener">GitHub</a>
@@ -443,6 +444,64 @@
   </div>
 </section>
 
+<!-- CAPABILITIES -->
+<section class="why" id="capabilities">
+  <div class="section-head">
+    <span class="tag">Capabilities</span>
+    <h2>Cognitive primitives, not just search.</h2>
+    <p>Everything listed here works <strong>without an LLM in the loop</strong>. Smriti performs the graph algebra natively, keeping your agent fast and deterministic.</p>
+  </div>
+  <div class="why-grid">
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">01</div>
+      <h3>Confidence Verdicts</h3>
+      <p>Smriti knows when it doesn't know. It returns a verdict (Confident, Ambiguous, Unsupported, Abstained). In our benchmarks, it correctly abstains on 91.7% of adversarial queries instead of hallucinating nearest-neighbors.</p>
+      <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>match verdict {
+    Confident => hit,
+    Abstained => "I don't know",
+}</code></pre>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">02</div>
+      <h3>Causal Trajectory Replay</h3>
+      <p>Memories aren't isolated. They are connected by typed edges (CausedBy, Before, Supersedes). You can reconstruct episodic narratives exactly as they unfolded via graph traversal.</p>
+      <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>smriti.recall_trajectory(id, Causal)</code></pre>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">03</div>
+      <h3>Salience & Decay Bypass</h3>
+      <p>Not all memories are equal. Trivial facts decay exponentially. Memories marked as <code>Critical</code> bypass decay and act as permanent PageRank seeds, keeping related context warm.</p>
+      <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>memory.salience(Salience::Critical)</code></pre>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">04</div>
+      <h3>Goal-Pinned Priming</h3>
+      <p>Memory isn't just past events. By storing a <code>MemoryKind::Goal</code>, the engine actively routes spreading activation towards nodes that help satisfy the agent's current objective.</p>
+      <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>smriti.remember("Fix bug").kind(Goal)</code></pre>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">05</div>
+      <h3>Contradiction & Supersede</h3>
+      <p>When facts change, the old memory isn't deleted—it's gracefully superseded. The contradiction is preserved in the graph as an audit trail, but standard recall only surfaces the live truth.</p>
+      <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>smriti.supersede(old_id, "Use OAuth2")</code></pre>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">06</div>
+      <h3>Predictive Coding (MDL)</h3>
+      <p>If your existing memory already predicts the new input, Smriti refuses to store it. This Friston-style surprise filter prevents redundancy and keeps the graph dense and fast.</p>
+      <pre style="margin-top: 1rem; border: none; background: rgba(0,0,0,0.3); font-size: 0.8rem; padding: 12px;"><code>// Filtered if redundant
+smriti.consolidate()</code></pre>
+    </div>
+
+  </div>
+</section>
+
 <!-- MCP -->
 <section class="bench" id="mcp">
   <div class="section-head">
@@ -492,8 +551,8 @@
   </div>
 
   <div style="text-align: center; margin-top: 2.5rem;">
-    <a class="btn btn-ghost" href="https://github.com/fork-demon/smriti/blob/main/docs/capabilities.md">
-      Read the full capabilities guide →
+    <a class="btn btn-ghost" href="#capabilities">
+      Explore all capabilities ↑
     </a>
   </div>
 </section>
@@ -528,7 +587,7 @@
 
   <div class="install-cta">
     <a class="btn btn-primary" href="https://github.com/fork-demon/smriti">Star on GitHub</a>
-    <a class="btn btn-ghost" href="https://github.com/fork-demon/smriti/blob/main/docs/capabilities.md">Read the docs →</a>
+    <a class="btn btn-ghost" href="#capabilities">View Capabilities →</a>
   </div>
 </section>
 
