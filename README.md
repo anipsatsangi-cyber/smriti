@@ -313,7 +313,6 @@ All tools are deterministic. None require an LLM in the loop. The agent provides
 
 - **Embeddings as default** for paraphrase-heavy production deployments (already wired, behind feature flag).
 - **Larger continuity benchmark** with 200+ memories per cluster to demonstrate residual-priming lift quantitatively (current bench null result is honest about the small-cluster limit).
-- **Real Mem0 / Letta / YantrikDB head-to-head** on LongMemEval and LOCOMO using the same NIM-backed LLM judge harness already shipped in `benchmarks/judge_results.py`.
 - **Score-aware Ambiguous tier** — apply tiered solo-or-pair truncation to AmbiguousLeader verdicts the same way it works for Confident.
 - **`tombstone_count()` threshold** to gate `vacuum()` inside `consolidate()` and avoid p95 spikes under heavy supersede traffic.
 
