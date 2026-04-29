@@ -126,6 +126,7 @@ impl WasmSmriti {
             "tokens_budget": result.tokens_budget,
             "candidates_considered": result.candidates_considered,
             "seeds_used": result.seeds_used,
+            "verdict": serde_json::to_value(&result.verdict).unwrap(),
         });
 
         serde_json::to_string(&payload).map_err(to_js_err)

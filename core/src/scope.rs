@@ -27,6 +27,9 @@ pub struct Scope {
     /// short-lived; session-scoped memories typically don't survive
     /// consolidation into the neocortex.
     pub session_id: Option<String>,
+    /// Optional. Other agents that are explicitly allowed to read this memory.
+    #[serde(default)]
+    pub shared_with: Vec<String>,
 }
 
 impl Scope {
@@ -36,6 +39,7 @@ impl Scope {
             agent_id: agent_id.into(),
             user_id: None,
             session_id: None,
+            shared_with: Vec::new(),
         }
     }
 
@@ -51,6 +55,15 @@ impl Scope {
         self
     }
 
+    /// Share this scope with another agent (builder).
+    pub fn share_with(mut self, agent_id: impl Into<String>) -> Self {
+        let agent_id = agent_id.into();
+        if !self.shared_with.contains(&agent_id) {
+            self.shared_with.push(agent_id);
+        }
+        self
+    }
+
     /// Whether this scope can read memories from `other`.
     ///
     /// Cascading rules:
@@ -60,6 +73,9 @@ impl Scope {
     /// - Same agent + user + session → reads all of the above plus that session
     pub fn can_read(&self, other: &Scope) -> bool {
         if self.agent_id != other.agent_id {
+            if other.shared_with.contains(&self.agent_id) {
+                return true;
+            }
             return false;
         }
         // Agent-level memories (no user) are visible to everyone in the agent
@@ -85,15 +101,26 @@ impl Scope {
     pub fn to_key(&self) -> String {
         let user = self.user_id.as_deref().unwrap_or("");
         let session = self.session_id.as_deref().unwrap_or("");
-        format!("{}|{}|{}", self.agent_id, user, session)
+        if self.shared_with.is_empty() {
+            format!("{}|{}|{}", self.agent_id, user, session)
+        } else {
+            format!("{}|{}|{}|{}", self.agent_id, user, session, self.shared_with.join(","))
+        }
     }
 
     /// Parse a Scope back from its compact key form.
     pub fn from_key(key: &str) -> Option<Self> {
-        let parts: Vec<&str> = key.splitn(3, '|').collect();
-        if parts.len() != 3 {
+        let parts: Vec<&str> = key.splitn(4, '|').collect();
+        if parts.len() < 3 {
             return None;
         }
+        
+        let shared_with = if parts.len() == 4 && !parts[3].is_empty() {
+            parts[3].split(',').map(|s| s.to_string()).collect()
+        } else {
+            Vec::new()
+        };
+
         Some(Self {
             agent_id: parts[0].to_string(),
             user_id: if parts[1].is_empty() {
@@ -106,6 +133,7 @@ impl Scope {
             } else {
                 Some(parts[2].to_string())
             },
+            shared_with,
         })
     }
 }
@@ -164,5 +192,30 @@ mod tests {
         let b = Scope::agent("agent_b");
         assert!(!a.can_read(&b));
         assert!(!b.can_read(&a));
+    }
+
+    #[test]
+    fn federated_sharing() {
+        let a = Scope::agent("agent_a");
+        let b = Scope::agent("agent_b").share_with("agent_a");
+        let c = Scope::agent("agent_c");
+        
+        // a can read b because b shared it with a
+        assert!(a.can_read(&b));
+        // b cannot read a
+        assert!(!b.can_read(&a));
+        // c cannot read b
+        assert!(!c.can_read(&b));
+    }
+
+    #[test]
+    fn shared_key_roundtrip() {
+        let s = Scope::agent("default")
+            .share_with("agent_b")
+            .share_with("agent_c");
+        let key = s.to_key();
+        let s2 = Scope::from_key(&key).unwrap();
+        assert_eq!(s, s2);
+        assert_eq!(s2.shared_with, vec!["agent_b", "agent_c"]);
     }
 }

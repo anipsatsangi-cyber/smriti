@@ -35,6 +35,8 @@ mod scope;
 mod smriti;
 
 pub use core::recall::{QueryIntent, RecallHit, RecallResult, RecallTrace, RecallVerdict};
-pub use node::{MemoryEdge, MemoryKind, MemoryNode, TagSource};
+pub use node::{
+    AttrFilter, AttributeValue, MatchResult, MemoryEdge, MemoryKind, MemoryNode, TagSource,
+};
 pub use scope::Scope;
 pub use smriti::{RecallBuilder, RememberBuilder, Smriti, SmritiStats};

@@ -131,6 +131,15 @@ def run_grouped(
                     "ground_truth": task.ground_truth,
                     "score": score,
                     "category": cat,
+                    # Persist the retrieved context so the LLM-judge tool
+                    # (judge_results.py) can re-score later without
+                    # re-ingesting the haystack. The harness's default
+                    # `evaluate()` already does this for LongMemEval; the
+                    # LOCOMO grouped runner is custom and used to omit it.
+                    "retrieved_context": context_text,
+                    "retrieved_context_lines": lines,
+                    # Carry metadata under the key the judge tool expects.
+                    "metadata": {"category": cat},
                     "recall_stats": {
                         "hits": len(recall.hits),
                         "tokens_used": recall.tokens_used,

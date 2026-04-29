@@ -28,6 +28,7 @@ MANIFEST
 # IDE
 .vscode/
 .idea/
+.claude/
 
 # OS
 .DS_Store
@@ -37,5 +38,11 @@ Thumbs.db
 *.log
 
 # Benchmark results
+benchmarks/results/*.json
+benchmarks/results/*_judged.json
 results/benchmarks/longmemeval/data/*.json
 benchmarks/longmemeval/data/longmemeval_s_cleaned.json
+
+# Cache
+**/.fastembed_cache/
+**/.claude/

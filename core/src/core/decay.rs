@@ -34,7 +34,15 @@ const HEBB_GAIN: f32 = 0.1;
 /// Combines the base importance, the kind-specific decay curve, and the
 /// access-count boost. Always returns a value in `[0, ~importance * 2]`.
 pub fn effective_importance(node: &MemoryNode) -> f32 {
-    let half_life = node.kind.half_life_days();
+    if node.salience == crate::node::Salience::Critical {
+        // Critical memories bypass decay and get a massive additive boost
+        return node.importance + 1.0;
+    }
+
+    let half_life = match node.salience {
+        crate::node::Salience::Important => node.kind.half_life_days() * 3.0,
+        _ => node.kind.half_life_days(),
+    };
 
     // For Hebbian kinds (Decision, Preference), age starts from last
     // access — frequent access keeps the memory "fresh."
@@ -129,5 +137,12 @@ mod tests {
         let ia = effective_importance(&a);
         let ib = effective_importance(&b);
         assert!(ia > ib * 5.0, "ia={}, ib={}", ia, ib);
+    }
+
+    #[test]
+    fn critical_bypasses_decay() {
+        let mut n = aged(MemoryKind::Event, 1000); // Super old event
+        n.salience = crate::node::Salience::Critical;
+        assert_eq!(effective_importance(&n), 2.0);
     }
 }

@@ -56,7 +56,7 @@ pub fn consolidate(
         .take(max)
         .collect();
 
-    for entry in candidates {
+    for mut entry in candidates {
         report.processed += 1;
         let scope = entry.node.scope.clone();
 
@@ -67,13 +67,40 @@ pub fn consolidate(
         // memory as a near-duplicate and merges/drops the new one,
         // hiding the corrected fact from recall.
         let verdict = if entry.node.supersedes.is_some() {
-            PredictionVerdict::Novel
+            PredictionVerdict::Novel { max_similarity: 1.0 } // Don't trigger surprise for supersedes
         } else {
             predict(&entry.node, neo, &scope)
         };
 
         match verdict {
-            PredictionVerdict::Novel => {
+            PredictionVerdict::Novel { max_similarity } => {
+                // Predictive Coding / Surprise — Friston-style "this memory
+                // is so unlike anything I've seen, I should learn from it."
+                //
+                // Tuning rules:
+                //
+                //   1. Threshold: previously 0.2, now 0.05. HDC fingerprint
+                //      similarity in a diverse 500-memory corpus typically
+                //      bottoms out around 0.10-0.15 — the old 0.2 threshold
+                //      caused most newly-consolidated memories in such a
+                //      corpus to be auto-promoted to Critical, polluting
+                //      the PPR seed pool (Critical nodes are fast-tracked
+                //      as seeds) and flattening the score landscape on
+                //      paraphrase queries. 0.05 only fires on memories
+                //      that are essentially orthogonal to the existing
+                //      graph — the genuine "I've never seen this" signal.
+                //
+                //   2. Minimum corpus size: don't fire on near-empty
+                //      neocortex. With 3 memories, everything looks
+                //      surprising; surprise only conveys information once
+                //      we have enough context to predict from.
+                const SURPRISE_THRESHOLD: f32 = 0.05;
+                const SURPRISE_MIN_CORPUS: usize = 30;
+                if max_similarity < SURPRISE_THRESHOLD && neo.len() >= SURPRISE_MIN_CORPUS {
+                    entry.node.salience = crate::node::Salience::Critical;
+                    entry.node.importance = 1.0;
+                }
+                
                 let new_id = entry.node.id;
                 let new_tags: HashSet<String> = entry.node.tags.iter().cloned().collect();
                 neo.insert(entry.node);

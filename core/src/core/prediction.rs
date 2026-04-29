@@ -40,8 +40,8 @@ pub const REINFORCE_THRESHOLD: f32 = 0.65;
 /// Outcome of the redundancy check.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PredictionVerdict {
-    /// The memory is genuinely new. Store it.
-    Novel,
+    /// The memory is genuinely new. Store it. Includes the highest similarity found for Surprise calculation.
+    Novel { max_similarity: f32 },
     /// The memory reinforces an existing one. Bump that one's access
     /// counter and merge tags.
     Reinforces { existing: Uuid, similarity: f32 },
@@ -51,7 +51,7 @@ pub enum PredictionVerdict {
 
 impl PredictionVerdict {
     pub fn is_novel(&self) -> bool {
-        matches!(self, PredictionVerdict::Novel)
+        matches!(self, PredictionVerdict::Novel { .. })
     }
 }
 
@@ -63,11 +63,11 @@ impl PredictionVerdict {
 /// considered redundant by a memory in user B's scope.
 pub fn predict(candidate: &MemoryNode, nx: &Neocortex, reader_scope: &Scope) -> PredictionVerdict {
     if nx.is_empty() {
-        return PredictionVerdict::Novel;
+        return PredictionVerdict::Novel { max_similarity: 0.0 };
     }
 
     let q = fingerprint(&candidate.text, &candidate.tags);
-    let near = nx.nearest_by_fingerprint(&q, 1, REINFORCE_THRESHOLD, Some(reader_scope));
+    let near = nx.nearest_by_fingerprint(&q, 1, -1.0, Some(reader_scope));
 
     match near.first() {
         Some(&(id, sim)) if sim >= REDUNDANT_THRESHOLD => PredictionVerdict::Redundant {
@@ -78,7 +78,8 @@ pub fn predict(candidate: &MemoryNode, nx: &Neocortex, reader_scope: &Scope) -> 
             existing: id,
             similarity: sim,
         },
-        _ => PredictionVerdict::Novel,
+        Some(&(_, sim)) => PredictionVerdict::Novel { max_similarity: sim },
+        None => PredictionVerdict::Novel { max_similarity: 0.0 },
     }
 }
 

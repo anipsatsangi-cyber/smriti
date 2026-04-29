@@ -24,7 +24,22 @@
 //! algebra and information theory.
 
 use std::collections::{HashMap, HashSet};
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Clone, Copy)]
+struct Instant;
+
+#[cfg(target_arch = "wasm32")]
+impl Instant {
+    fn now() -> Self {
+        Self
+    }
+    fn elapsed(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(0)
+    }
+}
 
 use uuid::Uuid;
 
@@ -109,6 +124,8 @@ pub struct RecallConfig {
     /// pack to surface the disagreement to the caller without burying
     /// it in a long list.
     pub truncate_when_ambiguous: usize,
+    /// Generic attribute filters. Candidates must match ALL filters to be scored.
+    pub attr_filters: HashMap<String, crate::node::AttrFilter>,
 }
 
 impl Default for RecallConfig {
@@ -128,6 +145,7 @@ impl Default for RecallConfig {
             truncate_when_ambiguous: 0,
             confident_solo_score_floor: 0.0,
             confident_solo_margin_floor: 0.0,
+            attr_filters: HashMap::new(),
         }
     }
 }
@@ -642,6 +660,13 @@ pub fn recall_with_dense(
 
     let mut raw_candidates: Vec<RawCandidate> = Vec::new();
 
+    // Accumulator for `AttrFilter::TypeMismatch` diagnostics across this
+    // recall. We don't surface this on every candidate (would spam the
+    // log) — instead we emit one warning per unique (key) at the end of
+    // recall, since a well-typed filter against a mistyped corpus is
+    // almost always a write-time bug the caller wants to know about.
+    let mut type_mismatch_keys: HashSet<String> = HashSet::new();
+
     // Hippocampal candidates
     for (entry, sim) in &hippo_hits {
         if !reader_scope.can_read(&entry.node.scope) {
@@ -651,6 +676,10 @@ pub fn recall_with_dense(
             continue;
         }
         if !cfg.kinds.is_empty() && !cfg.kinds.contains(&entry.node.kind) {
+            continue;
+        }
+        
+        if !attr_filter_passes(&entry.node, &cfg.attr_filters, &mut type_mismatch_keys) {
             continue;
         }
 
@@ -691,6 +720,10 @@ pub fn recall_with_dense(
             continue;
         }
         if !cfg.kinds.is_empty() && !cfg.kinds.contains(&node.kind) {
+            continue;
+        }
+
+        if !attr_filter_passes(node, &cfg.attr_filters, &mut type_mismatch_keys) {
             continue;
         }
 
@@ -1071,6 +1104,20 @@ pub fn recall_with_dense(
     // bill the caller.
     let tokens_used: usize = selected.iter().map(|h| h.node.token_count).sum();
 
+    // Surface attribute-filter type mismatches once per query. These
+    // almost always indicate the caller stored a value with a type
+    // that doesn't match the filter shape (e.g. text "50" vs Gt(50.0))
+    // — the kind of bug that's invisible without a heads-up.
+    if !type_mismatch_keys.is_empty() {
+        let mut keys: Vec<&String> = type_mismatch_keys.iter().collect();
+        keys.sort();
+        eprintln!(
+            "[smriti] attr filter type-mismatch on key(s): {} — affected memories were excluded; \
+             check that stored values use the same AttributeValue variant as the filter.",
+            keys.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+        );
+    }
+
     trace.total_us = total_t0.elapsed().as_micros();
 
     RecallResult {
@@ -1085,6 +1132,42 @@ pub fn recall_with_dense(
         top_margin,
         intent,
     }
+}
+
+/// Apply all attribute filters to a candidate node. Returns `true` iff
+/// every filter the caller specified `Match`-es against this node's
+/// attributes.
+///
+/// Three classes of "no":
+///
+/// - Attribute is missing on the node → not a match. Filters are AND-ed,
+///   so a missing attribute is a hard exclusion. (Callers who want
+///   "match-or-pass-if-missing" should use `AttrFilter::Any` with a
+///   trivial sentinel, or omit the filter entirely.)
+/// - Filter `Match`-es: include this candidate.
+/// - Filter `NoMatch`/`TypeMismatch`: exclude. `TypeMismatch` is also
+///   recorded into `type_mismatch_keys` so recall can warn the caller
+///   once per query rather than silently dropping memories.
+fn attr_filter_passes(
+    node: &MemoryNode,
+    filters: &HashMap<String, crate::node::AttrFilter>,
+    type_mismatch_keys: &mut HashSet<String>,
+) -> bool {
+    use crate::node::MatchResult;
+    for (key, filter) in filters {
+        let Some(val) = node.attributes.get(key) else {
+            return false;
+        };
+        match filter.matches(val) {
+            MatchResult::Match => continue,
+            MatchResult::NoMatch => return false,
+            MatchResult::TypeMismatch => {
+                type_mismatch_keys.insert(key.clone());
+                return false;
+            }
+        }
+    }
+    true
 }
 
 /// BM25-style IDF-weighted term overlap.
@@ -1374,21 +1457,7 @@ fn jaccard_set(a: &HashSet<String>, b: &HashSet<String>) -> f32 {
     }
 }
 
-/// Jaccard similarity over tag sets.
-fn jaccard(a: &[String], b: &[String]) -> f32 {
-    if a.is_empty() && b.is_empty() {
-        return 0.0;
-    }
-    let sa: std::collections::HashSet<&String> = a.iter().collect();
-    let sb: std::collections::HashSet<&String> = b.iter().collect();
-    let inter = sa.intersection(&sb).count() as f32;
-    let union = sa.union(&sb).count() as f32;
-    if union == 0.0 {
-        0.0
-    } else {
-        inter / union
-    }
-}
+
 
 #[cfg(test)]
 mod tests {
@@ -1496,5 +1565,206 @@ mod tests {
         let words = word_set("JWT tokens are rotated daily");
         let score = term_overlap(&["token".to_string()], &words, &idf);
         assert!(score > 0.99, "expected plural variant match, got {score}");
+    }
+
+    // ── Attribute-filter integration through the full recall pipeline ─
+
+    use crate::node::{AttrFilter, AttributeValue};
+
+    fn mk_with_attrs(
+        text: &str,
+        tags: &[&str],
+        kind: MemoryKind,
+        attrs: &[(&str, AttributeValue)],
+    ) -> MemoryNode {
+        let mut n = mk(text, tags, kind);
+        for (k, v) in attrs {
+            n.attributes.insert((*k).to_string(), v.clone());
+        }
+        n
+    }
+
+    #[test]
+    fn attr_filter_eq_excludes_non_matching_memories() {
+        let hippo = Hippocampus::default();
+        let mut neo = Neocortex::new();
+        neo.insert(mk_with_attrs(
+            "I bought a tennis racket downtown",
+            &["shopping"],
+            MemoryKind::Event,
+            &[(
+                "location",
+                AttributeValue::Text("downtown".to_string()),
+            )],
+        ));
+        neo.insert(mk_with_attrs(
+            "I bought groceries at the airport",
+            &["shopping"],
+            MemoryKind::Event,
+            &[(
+                "location",
+                AttributeValue::Text("airport".to_string()),
+            )],
+        ));
+
+        let mut cfg = RecallConfig::default();
+        cfg.attr_filters.insert(
+            "location".to_string(),
+            AttrFilter::Eq(AttributeValue::Text("downtown".to_string())),
+        );
+        let r = recall("what did I buy", &[], &Scope::default(), &hippo, &neo, &cfg);
+        assert!(!r.hits.is_empty(), "expected the downtown memory");
+        assert!(
+            r.hits.iter().all(|h| h.node.text.contains("downtown")),
+            "filter should have excluded the airport memory: hits={:?}",
+            r.hits.iter().map(|h| &h.node.text).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn attr_filter_range_includes_only_in_band() {
+        let hippo = Hippocampus::default();
+        let mut neo = Neocortex::new();
+        neo.insert(mk_with_attrs(
+            "Bought item priced at 75",
+            &["shopping"],
+            MemoryKind::Event,
+            &[("price", AttributeValue::Number(75.0))],
+        ));
+        neo.insert(mk_with_attrs(
+            "Bought item priced at 200",
+            &["shopping"],
+            MemoryKind::Event,
+            &[("price", AttributeValue::Number(200.0))],
+        ));
+        neo.insert(mk_with_attrs(
+            "Bought item priced at 25",
+            &["shopping"],
+            MemoryKind::Event,
+            &[("price", AttributeValue::Number(25.0))],
+        ));
+
+        let mut cfg = RecallConfig::default();
+        cfg.attr_filters.insert(
+            "price".to_string(),
+            AttrFilter::Range(
+                AttributeValue::Number(50.0),
+                AttributeValue::Number(100.0),
+            ),
+        );
+        let r = recall(
+            "purchases",
+            &[],
+            &Scope::default(),
+            &hippo,
+            &neo,
+            &cfg,
+        );
+        for h in &r.hits {
+            let p = h.node.attributes.get("price").unwrap();
+            match p {
+                AttributeValue::Number(n) => assert!(*n >= 50.0 && *n <= 100.0),
+                _ => panic!("expected Number"),
+            }
+        }
+    }
+
+    #[test]
+    fn attr_filter_missing_attribute_excludes_memory() {
+        // A memory without the filtered key MUST be excluded — filters are
+        // AND-of-required. This catches "I'm sure I tagged it" bugs early.
+        let hippo = Hippocampus::default();
+        let mut neo = Neocortex::new();
+        neo.insert(mk_with_attrs(
+            "tagged with location",
+            &["t"],
+            MemoryKind::Event,
+            &[("location", AttributeValue::Text("Seattle".to_string()))],
+        ));
+        neo.insert(mk_with_attrs(
+            "no location attribute set",
+            &["t"],
+            MemoryKind::Event,
+            &[],
+        ));
+
+        let mut cfg = RecallConfig::default();
+        cfg.attr_filters.insert(
+            "location".to_string(),
+            AttrFilter::Eq(AttributeValue::Text("Seattle".to_string())),
+        );
+        let r = recall("anything", &[], &Scope::default(), &hippo, &neo, &cfg);
+        for h in &r.hits {
+            assert!(h.node.attributes.contains_key("location"));
+        }
+    }
+
+    #[test]
+    fn attr_filter_any_composition_widens_inclusion() {
+        let hippo = Hippocampus::default();
+        let mut neo = Neocortex::new();
+        for city in &["Seattle", "Portland", "Boston"] {
+            neo.insert(mk_with_attrs(
+                &format!("event in {}", city),
+                &["e"],
+                MemoryKind::Event,
+                &[("location", AttributeValue::Text(city.to_string()))],
+            ));
+        }
+
+        let mut cfg = RecallConfig::default();
+        cfg.attr_filters.insert(
+            "location".to_string(),
+            AttrFilter::Any(vec![
+                AttrFilter::Eq(AttributeValue::Text("Seattle".to_string())),
+                AttrFilter::Eq(AttributeValue::Text("Portland".to_string())),
+            ]),
+        );
+        let r = recall("event", &[], &Scope::default(), &hippo, &neo, &cfg);
+        let cities: HashSet<String> = r
+            .hits
+            .iter()
+            .filter_map(|h| match h.node.attributes.get("location") {
+                Some(AttributeValue::Text(s)) => Some(s.clone()),
+                _ => None,
+            })
+            .collect();
+        assert!(cities.contains("Seattle"));
+        assert!(cities.contains("Portland"));
+        assert!(!cities.contains("Boston"), "Boston should be excluded by Any");
+    }
+
+    #[test]
+    fn attr_filter_type_mismatch_excludes_and_does_not_match_other_typed_memories() {
+        // Stored as Text("50"), filtered with Gt(Number(50)) — should
+        // be excluded, not silently included or matched.
+        let hippo = Hippocampus::default();
+        let mut neo = Neocortex::new();
+        neo.insert(mk_with_attrs(
+            "stored as text accidentally",
+            &["t"],
+            MemoryKind::Event,
+            &[("price", AttributeValue::Text("50".to_string()))],
+        ));
+        neo.insert(mk_with_attrs(
+            "stored as proper number",
+            &["t"],
+            MemoryKind::Event,
+            &[("price", AttributeValue::Number(75.0))],
+        ));
+
+        let mut cfg = RecallConfig::default();
+        cfg.attr_filters.insert(
+            "price".to_string(),
+            AttrFilter::Gt(AttributeValue::Number(40.0)),
+        );
+        let r = recall("anything", &[], &Scope::default(), &hippo, &neo, &cfg);
+        // Only the well-typed memory should pass.
+        for h in &r.hits {
+            match h.node.attributes.get("price") {
+                Some(AttributeValue::Number(_)) => {}
+                other => panic!("unexpected price: {other:?}"),
+            }
+        }
     }
 }

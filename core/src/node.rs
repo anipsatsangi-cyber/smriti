@@ -5,11 +5,244 @@
 //! recall priority — modeling the distinction Tulving (1972) drew between
 //! episodic, semantic, and procedural memory in cognitive psychology.
 
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::scope::Scope;
+
+/// Generic typed attribute value attached to a memory. Used by the
+/// optional structured-filter layer: agents (or callers) can attach
+/// arbitrary metadata at write time and filter on it at recall time
+/// without the engine baking in any specific dimension (time, space,
+/// price, sentiment, etc).
+///
+/// Equality is *epsilon-aware* on `Number` (tolerance `1e-9`) so that
+/// computed numerics like `0.1 + 0.2` compare equal to `0.3`. The
+/// derived `PartialEq` would have produced strict-bitwise comparison
+/// and a steady stream of "I'm sure I tagged it" bug reports.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AttributeValue {
+    Boolean(bool),
+    Number(f64),
+    Text(String),
+    List(Vec<AttributeValue>),
+}
+
+/// Tolerance used by `AttributeValue::PartialEq` on `Number`. Picked
+/// to be tighter than f32 round-off (~1e-7) but loose enough to
+/// absorb f64 arithmetic noise.
+pub const ATTR_NUMBER_EPSILON: f64 = 1e-9;
+
+impl PartialEq for AttributeValue {
+    fn eq(&self, other: &Self) -> bool {
+        use AttributeValue::*;
+        match (self, other) {
+            (Boolean(a), Boolean(b)) => a == b,
+            (Number(a), Number(b)) => (a - b).abs() <= ATTR_NUMBER_EPSILON,
+            (Text(a), Text(b)) => a == b,
+            (List(a), List(b)) => {
+                a.len() == b.len() && a.iter().zip(b.iter()).all(|(x, y)| x == y)
+            }
+            _ => false,
+        }
+    }
+}
+
+/// Outcome of `AttrFilter::matches`. The tri-state lets us distinguish
+/// "this memory genuinely doesn't match" from "the caller's filter
+/// was the wrong type for this attribute" — which is almost certainly
+/// a bug in the caller, not a deliberate exclusion. Surfacing the
+/// distinction lets recall log a one-off warning instead of silently
+/// dropping memories.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MatchResult {
+    /// Filter applies to this attribute and the value satisfies it.
+    Match,
+    /// Filter applies to this attribute and the value does NOT satisfy it.
+    NoMatch,
+    /// Filter and value are of incompatible types (e.g. `Gt(Number)` vs `Text`).
+    /// The caller almost certainly meant something else; treat as "exclude
+    /// this candidate" but flag at the log level so it's debuggable.
+    TypeMismatch,
+}
+
+impl MatchResult {
+    /// Convenience: was this a positive match? Both `NoMatch` and
+    /// `TypeMismatch` return `false`. Recall uses this for the include
+    /// decision while still being able to inspect the variant for logging.
+    pub fn is_match(self) -> bool {
+        matches!(self, MatchResult::Match)
+    }
+}
+
+/// Filter primitive on a single named attribute.
+///
+/// Composition primitives (`All`, `Any`) compose multiple filters
+/// against the *same* attribute key. They flatten to AND / OR over
+/// child results. A `TypeMismatch` from any child propagates up — we
+/// don't quietly absorb it, because the agent's wrong-shape filter
+/// shouldn't silently turn into "no match."
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AttrFilter {
+    /// Exact equality (epsilon-aware for numbers — see `AttributeValue::eq`).
+    Eq(AttributeValue),
+    /// Strictly greater than. Numbers only — anything else is `TypeMismatch`.
+    Gt(AttributeValue),
+    /// Strictly less than. Numbers only.
+    Lt(AttributeValue),
+    /// **List membership only.** `Contains(v)` against a `List` value
+    /// returns `Match` iff `v` is one of the list's elements (epsilon-
+    /// aware for `Number` elements). Against a non-list value this is
+    /// `TypeMismatch` — use `Substring` for text containment.
+    Contains(AttributeValue),
+    /// Substring search inside a `Text` value. Case-sensitive by design
+    /// (callers who want case-insensitive can lowercase at write time).
+    Substring(String),
+    /// Inclusive numeric range `[min, max]`. Numbers only.
+    Range(AttributeValue, AttributeValue),
+    /// All sub-filters must `Match`. Empty `All` matches trivially.
+    All(Vec<AttrFilter>),
+    /// At least one sub-filter must `Match`. Empty `Any` is `NoMatch`
+    /// (no positive evidence to support inclusion).
+    Any(Vec<AttrFilter>),
+}
+
+impl AttrFilter {
+    /// Apply this filter to a single attribute value. See `MatchResult`
+    /// for the meaning of each variant.
+    pub fn matches(&self, val: &AttributeValue) -> MatchResult {
+        use AttrFilter::*;
+        use AttributeValue as V;
+        use MatchResult::*;
+
+        match self {
+            Eq(target) => {
+                // Cross-type equality is `TypeMismatch`, not `NoMatch`.
+                // Same-type equality uses our epsilon-aware `PartialEq`.
+                if std::mem::discriminant(target) != std::mem::discriminant(val) {
+                    TypeMismatch
+                } else if target == val {
+                    Match
+                } else {
+                    NoMatch
+                }
+            }
+            Gt(target) => match (target, val) {
+                (V::Number(t), V::Number(v)) => {
+                    if v > t {
+                        Match
+                    } else {
+                        NoMatch
+                    }
+                }
+                _ => TypeMismatch,
+            },
+            Lt(target) => match (target, val) {
+                (V::Number(t), V::Number(v)) => {
+                    if v < t {
+                        Match
+                    } else {
+                        NoMatch
+                    }
+                }
+                _ => TypeMismatch,
+            },
+            Contains(needle) => match val {
+                V::List(items) => {
+                    if items.iter().any(|item| item == needle) {
+                        Match
+                    } else {
+                        NoMatch
+                    }
+                }
+                _ => TypeMismatch,
+            },
+            Substring(needle) => match val {
+                V::Text(haystack) => {
+                    if haystack.contains(needle) {
+                        Match
+                    } else {
+                        NoMatch
+                    }
+                }
+                _ => TypeMismatch,
+            },
+            Range(lo, hi) => match (lo, hi, val) {
+                (V::Number(l), V::Number(h), V::Number(v)) => {
+                    if v >= l && v <= h {
+                        Match
+                    } else {
+                        NoMatch
+                    }
+                }
+                _ => TypeMismatch,
+            },
+            All(children) => {
+                if children.is_empty() {
+                    return Match;
+                }
+                for c in children {
+                    match c.matches(val) {
+                        Match => continue,
+                        NoMatch => return NoMatch,
+                        TypeMismatch => return TypeMismatch,
+                    }
+                }
+                Match
+            }
+            Any(children) => {
+                if children.is_empty() {
+                    return NoMatch;
+                }
+                let mut saw_type_mismatch = false;
+                for c in children {
+                    match c.matches(val) {
+                        Match => return Match,
+                        NoMatch => continue,
+                        TypeMismatch => saw_type_mismatch = true,
+                    }
+                }
+                // If at least one child genuinely didn't match, prefer
+                // that over the type-mismatch story (the caller had at
+                // least one well-typed branch). If ALL branches were
+                // type-mismatched, propagate the diagnostic upward.
+                if saw_type_mismatch && children.len() == children.iter().filter(|c| matches!(c.matches(val), TypeMismatch)).count() {
+                    TypeMismatch
+                } else {
+                    NoMatch
+                }
+            }
+        }
+    }
+}
+
+/// The emotional or operational salience of a memory.
+/// Highly salient memories bypass standard decay curves and are retained longer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Salience {
+    /// Normal decay based on MemoryKind.
+    #[default]
+    Routine,
+    /// Moderately elevated importance; slower decay.
+    Important,
+    /// Life-safety or system-critical. Bypasses standard decay entirely.
+    Critical,
+}
+
+impl Salience {
+    pub fn parse(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "important" => Salience::Important,
+            "critical" => Salience::Critical,
+            _ => Salience::Routine,
+        }
+    }
+}
 
 /// The cognitive category of a memory.
 ///
@@ -32,6 +265,8 @@ pub enum MemoryKind {
     Event,
     /// A user/agent preference. Decay extends on access.
     Preference,
+    /// An active agent objective. Emits persistent semantic priming. Never decays naturally.
+    Goal,
 }
 
 impl MemoryKind {
@@ -43,6 +278,7 @@ impl MemoryKind {
             MemoryKind::Fact => 90.0,
             MemoryKind::Event => 14.0,
             MemoryKind::Preference => 30.0,
+            MemoryKind::Goal => 365.0, // Goals are superseded when complete, not decayed.
         }
     }
 
@@ -58,6 +294,7 @@ impl MemoryKind {
             "decision" => MemoryKind::Decision,
             "event" => MemoryKind::Event,
             "preference" | "pref" => MemoryKind::Preference,
+            "goal" => MemoryKind::Goal,
             _ => MemoryKind::Fact,
         }
     }
@@ -69,6 +306,7 @@ impl MemoryKind {
             MemoryKind::Fact,
             MemoryKind::Event,
             MemoryKind::Preference,
+            MemoryKind::Goal,
         ]
     }
 }
@@ -80,6 +318,7 @@ impl std::fmt::Display for MemoryKind {
             MemoryKind::Fact => "fact",
             MemoryKind::Event => "event",
             MemoryKind::Preference => "preference",
+            MemoryKind::Goal => "goal",
         };
         f.write_str(s)
     }
@@ -121,6 +360,9 @@ pub struct MemoryNode {
     pub tag_sources: Vec<TagSource>,
     /// Cognitive kind (determines decay curve).
     pub kind: MemoryKind,
+    /// Salience (can bypass decay).
+    #[serde(default)]
+    pub salience: Salience,
     /// Multi-tenant scope (agent / user / session).
     pub scope: Scope,
     /// Static importance, 0.0 – 1.0. Combined with decay at recall time.
@@ -141,6 +383,9 @@ pub struct MemoryNode {
     pub token_count: usize,
     /// Schema/version field for sync compatibility.
     pub version: u64,
+    /// Generic structured attributes.
+    #[serde(default)]
+    pub attributes: HashMap<String, AttributeValue>,
 }
 
 impl MemoryNode {
@@ -155,6 +400,7 @@ impl MemoryNode {
             tags: Vec::new(),
             tag_sources: Vec::new(),
             kind,
+            salience: Salience::Routine,
             scope,
             importance: 0.5,
             created_at: now,
@@ -164,6 +410,7 @@ impl MemoryNode {
             superseded_by: None,
             token_count,
             version: 1,
+            attributes: HashMap::new(),
         }
     }
 
@@ -307,5 +554,195 @@ mod tests {
         assert_eq!(n.access_count, 0);
         assert_eq!(n.version, 1);
         assert!(n.token_count > 0);
+    }
+
+    // ── AttributeValue + AttrFilter primitives ──────────────────────
+
+    #[test]
+    fn attribute_eq_uses_epsilon_for_numbers() {
+        // 0.1 + 0.2 != 0.3 under strict-bitwise equality. Our PartialEq
+        // is the user-facing definition of "same number."
+        let a = AttributeValue::Number(0.1 + 0.2);
+        let b = AttributeValue::Number(0.3);
+        assert_eq!(a, b);
+
+        // Genuine inequality stays inequal.
+        let c = AttributeValue::Number(0.3);
+        let d = AttributeValue::Number(0.4);
+        assert_ne!(c, d);
+
+        // Cross-type still not equal.
+        assert_ne!(
+            AttributeValue::Number(1.0),
+            AttributeValue::Text("1.0".to_string())
+        );
+    }
+
+    #[test]
+    fn attr_eq_filter_matches_only_same_type() {
+        let f = AttrFilter::Eq(AttributeValue::Text("Seattle".to_string()));
+        assert_eq!(
+            f.matches(&AttributeValue::Text("Seattle".to_string())),
+            MatchResult::Match
+        );
+        assert_eq!(
+            f.matches(&AttributeValue::Text("Boston".to_string())),
+            MatchResult::NoMatch
+        );
+        // Cross-type is TypeMismatch, NOT NoMatch.
+        assert_eq!(
+            f.matches(&AttributeValue::Number(50.0)),
+            MatchResult::TypeMismatch
+        );
+    }
+
+    #[test]
+    fn attr_gt_lt_numbers_only() {
+        let f = AttrFilter::Gt(AttributeValue::Number(50.0));
+        assert_eq!(f.matches(&AttributeValue::Number(75.0)), MatchResult::Match);
+        assert_eq!(f.matches(&AttributeValue::Number(50.0)), MatchResult::NoMatch); // strict >
+        assert_eq!(f.matches(&AttributeValue::Number(25.0)), MatchResult::NoMatch);
+        assert_eq!(
+            f.matches(&AttributeValue::Text("75".to_string())),
+            MatchResult::TypeMismatch
+        );
+
+        let f = AttrFilter::Lt(AttributeValue::Number(50.0));
+        assert_eq!(f.matches(&AttributeValue::Number(25.0)), MatchResult::Match);
+        assert_eq!(f.matches(&AttributeValue::Number(50.0)), MatchResult::NoMatch);
+    }
+
+    #[test]
+    fn attr_range_inclusive_numeric_only() {
+        let f = AttrFilter::Range(
+            AttributeValue::Number(50.0),
+            AttributeValue::Number(100.0),
+        );
+        assert_eq!(f.matches(&AttributeValue::Number(50.0)), MatchResult::Match); // inclusive lo
+        assert_eq!(f.matches(&AttributeValue::Number(100.0)), MatchResult::Match); // inclusive hi
+        assert_eq!(f.matches(&AttributeValue::Number(75.0)), MatchResult::Match);
+        assert_eq!(f.matches(&AttributeValue::Number(49.9)), MatchResult::NoMatch);
+        assert_eq!(f.matches(&AttributeValue::Number(100.1)), MatchResult::NoMatch);
+        assert_eq!(
+            f.matches(&AttributeValue::Text("75".to_string())),
+            MatchResult::TypeMismatch
+        );
+    }
+
+    #[test]
+    fn attr_contains_is_list_membership_only() {
+        let needle = AttributeValue::Text("Seattle".to_string());
+        let f = AttrFilter::Contains(needle.clone());
+        let list = AttributeValue::List(vec![
+            AttributeValue::Text("Seattle".to_string()),
+            AttributeValue::Text("Portland".to_string()),
+        ]);
+        assert_eq!(f.matches(&list), MatchResult::Match);
+
+        let other_list =
+            AttributeValue::List(vec![AttributeValue::Text("Boston".to_string())]);
+        assert_eq!(f.matches(&other_list), MatchResult::NoMatch);
+
+        // CRITICAL: Contains against Text is TypeMismatch, not substring search.
+        // Use Substring for that.
+        assert_eq!(
+            f.matches(&AttributeValue::Text("Seattle, WA".to_string())),
+            MatchResult::TypeMismatch
+        );
+    }
+
+    #[test]
+    fn attr_substring_text_only() {
+        let f = AttrFilter::Substring("Seattle".to_string());
+        assert_eq!(
+            f.matches(&AttributeValue::Text("Seattle, WA".to_string())),
+            MatchResult::Match
+        );
+        assert_eq!(
+            f.matches(&AttributeValue::Text("Boston".to_string())),
+            MatchResult::NoMatch
+        );
+        // Substring against List is TypeMismatch — use Contains for that.
+        assert_eq!(
+            f.matches(&AttributeValue::List(vec![AttributeValue::Text(
+                "Seattle".to_string()
+            )])),
+            MatchResult::TypeMismatch
+        );
+    }
+
+    #[test]
+    fn attr_all_short_circuits_on_first_failure() {
+        let f = AttrFilter::All(vec![
+            AttrFilter::Gt(AttributeValue::Number(50.0)),
+            AttrFilter::Lt(AttributeValue::Number(100.0)),
+        ]);
+        assert_eq!(f.matches(&AttributeValue::Number(75.0)), MatchResult::Match);
+        assert_eq!(f.matches(&AttributeValue::Number(150.0)), MatchResult::NoMatch);
+
+        // Empty All is trivially Match (vacuous truth).
+        let empty = AttrFilter::All(vec![]);
+        assert_eq!(
+            empty.matches(&AttributeValue::Number(75.0)),
+            MatchResult::Match
+        );
+
+        // Type mismatch in any child propagates upward.
+        let mixed = AttrFilter::All(vec![
+            AttrFilter::Gt(AttributeValue::Number(50.0)),
+            AttrFilter::Substring("foo".to_string()), // type-mismatched against Number
+        ]);
+        assert_eq!(
+            mixed.matches(&AttributeValue::Number(75.0)),
+            MatchResult::TypeMismatch
+        );
+    }
+
+    #[test]
+    fn attr_any_short_circuits_on_first_match() {
+        let f = AttrFilter::Any(vec![
+            AttrFilter::Eq(AttributeValue::Text("Seattle".to_string())),
+            AttrFilter::Eq(AttributeValue::Text("Portland".to_string())),
+        ]);
+        assert_eq!(
+            f.matches(&AttributeValue::Text("Seattle".to_string())),
+            MatchResult::Match
+        );
+        assert_eq!(
+            f.matches(&AttributeValue::Text("Portland".to_string())),
+            MatchResult::Match
+        );
+        assert_eq!(
+            f.matches(&AttributeValue::Text("Boston".to_string())),
+            MatchResult::NoMatch
+        );
+
+        // Empty Any is NoMatch — no positive evidence.
+        let empty = AttrFilter::Any(vec![]);
+        assert_eq!(
+            empty.matches(&AttributeValue::Text("Seattle".to_string())),
+            MatchResult::NoMatch
+        );
+    }
+
+    #[test]
+    fn match_result_is_match_only_for_match() {
+        assert!(MatchResult::Match.is_match());
+        assert!(!MatchResult::NoMatch.is_match());
+        assert!(!MatchResult::TypeMismatch.is_match());
+    }
+
+    #[test]
+    fn attribute_value_round_trips_through_json() {
+        // Untagged enum serialization: the JSON shape is the value itself,
+        // not {"Text": "..."}. This is what keeps the MCP API ergonomic.
+        let v = AttributeValue::List(vec![
+            AttributeValue::Text("a".to_string()),
+            AttributeValue::Number(1.5),
+            AttributeValue::Boolean(true),
+        ]);
+        let s = serde_json::to_string(&v).unwrap();
+        let v2: AttributeValue = serde_json::from_str(&s).unwrap();
+        assert_eq!(v, v2);
     }
 }

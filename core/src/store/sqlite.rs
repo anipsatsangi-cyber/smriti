@@ -80,7 +80,8 @@ impl SqliteStore {
                 superseded_by TEXT,
                 token_count   INTEGER NOT NULL,
                 version       INTEGER NOT NULL DEFAULT 1,
-                tag_sources   TEXT NOT NULL DEFAULT '[]'
+                tag_sources   TEXT NOT NULL DEFAULT '[]',
+                attributes    TEXT NOT NULL DEFAULT '{}'
             );
             CREATE INDEX IF NOT EXISTS idx_scope ON memories(scope_key);
             CREATE INDEX IF NOT EXISTS idx_kind  ON memories(kind);
@@ -102,6 +103,10 @@ impl SqliteStore {
         // we ignore the error if the column is already present.
         let _ = conn.execute(
             "ALTER TABLE memories ADD COLUMN tag_sources TEXT NOT NULL DEFAULT '[]'",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE memories ADD COLUMN attributes TEXT NOT NULL DEFAULT '{}'",
             [],
         );
 
@@ -145,12 +150,13 @@ impl Store for SqliteStore {
         let mut sources = node.tag_sources.clone();
         sources.resize(node.tags.len(), crate::node::TagSource::User);
         let sources_json = serde_json::to_string(&sources)?;
+        let attributes_json = serde_json::to_string(&node.attributes)?;
         conn.execute(
             r#"INSERT OR REPLACE INTO memories
                (id, text, tags, kind, scope_key, importance, created_at,
                 last_accessed, access_count, supersedes, superseded_by,
-                token_count, version, tag_sources)
-               VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14)"#,
+                token_count, version, tag_sources, attributes)
+               VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)"#,
             params![
                 node.id.to_string(),
                 node.text,
@@ -166,6 +172,7 @@ impl Store for SqliteStore {
                 node.token_count as i64,
                 node.version as i64,
                 sources_json,
+                attributes_json,
             ],
         )?;
         Ok(())
@@ -185,7 +192,7 @@ impl Store for SqliteStore {
         let mut stmt = conn.prepare(
             r#"SELECT id, text, tags, kind, scope_key, importance,
                       created_at, last_accessed, access_count, supersedes,
-                      superseded_by, token_count, version, tag_sources
+                      superseded_by, token_count, version, tag_sources, attributes
                FROM memories"#,
         )?;
         let rows = stmt.query_map([], |row| {
@@ -203,8 +210,11 @@ impl Store for SqliteStore {
             let token_count: i64 = row.get(11)?;
             let version: i64 = row.get(12)?;
             let tag_sources_json: String = row.get(13)?;
+            let attributes_json: String = row.get(14)?;
 
             let tags: Vec<String> = serde_json::from_str(&tags_json).unwrap_or_default();
+            let attributes: std::collections::HashMap<String, crate::node::AttributeValue> = 
+                serde_json::from_str(&attributes_json).unwrap_or_default();
             let mut tag_sources: Vec<crate::node::TagSource> =
                 serde_json::from_str(&tag_sources_json).unwrap_or_default();
             // Legacy rows (and explicit defaults) come back empty —
@@ -218,6 +228,7 @@ impl Store for SqliteStore {
                 tags,
                 tag_sources,
                 kind: MemoryKind::parse(&kind),
+                salience: crate::node::Salience::Routine,
                 scope,
                 importance: importance as f32,
                 created_at: from_ts(created_at),
@@ -227,6 +238,7 @@ impl Store for SqliteStore {
                 superseded_by: superseded_by.and_then(|s| Uuid::parse_str(&s).ok()),
                 token_count: token_count as usize,
                 version: version as u64,
+                attributes,
             })
         })?;
         let mut out = Vec::new();
@@ -367,6 +379,64 @@ mod tests {
         store.touch(node.id).unwrap();
         let loaded = store.load_all().unwrap();
         assert_eq!(loaded[0].access_count, 2);
+    }
+
+    #[test]
+    fn attributes_round_trip_through_sqlite() {
+        use crate::node::AttributeValue;
+        let store = SqliteStore::open(":memory:").unwrap();
+        let mut node = MemoryNode::new("priced item", MemoryKind::Event, Scope::default());
+        node.attributes.insert(
+            "price".to_string(),
+            AttributeValue::Number(75.5),
+        );
+        node.attributes.insert(
+            "location".to_string(),
+            AttributeValue::Text("Seattle".to_string()),
+        );
+        node.attributes.insert(
+            "tags".to_string(),
+            AttributeValue::List(vec![
+                AttributeValue::Text("a".to_string()),
+                AttributeValue::Text("b".to_string()),
+            ]),
+        );
+        store.upsert(&node).unwrap();
+
+        let loaded = store.load_all().unwrap();
+        assert_eq!(loaded.len(), 1);
+        let got = &loaded[0];
+        assert_eq!(got.attributes.len(), 3);
+        assert_eq!(
+            got.attributes.get("price"),
+            Some(&AttributeValue::Number(75.5))
+        );
+        assert_eq!(
+            got.attributes.get("location"),
+            Some(&AttributeValue::Text("Seattle".to_string()))
+        );
+        match got.attributes.get("tags") {
+            Some(AttributeValue::List(items)) => assert_eq!(items.len(), 2),
+            other => panic!("expected list, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn legacy_row_without_attributes_loads_with_empty_map() {
+        // The forward migration adds the attributes column with a
+        // default of '{}'. A row inserted before the migration (or in a
+        // clean DB without attributes) should round-trip with an empty
+        // attributes HashMap, not a parse error.
+        let store = SqliteStore::open(":memory:").unwrap();
+        let node = MemoryNode::new("legacy", MemoryKind::Fact, Scope::default());
+        // Don't set any attributes — simulate legacy ingest path.
+        store.upsert(&node).unwrap();
+        let loaded = store.load_all().unwrap();
+        assert_eq!(loaded.len(), 1);
+        assert!(
+            loaded[0].attributes.is_empty(),
+            "expected empty attributes on legacy load"
+        );
     }
 
     #[test]

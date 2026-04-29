@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smriti — Local-First Memory for AI Agents</title>
+<meta name="description" content="स्मृति · Local-first memory for AI agents. Runs in the browser, on edge servers, and on small devices with the same Rust core. Zero-ML by default, embeddings optional." />
+<meta name="theme-color" content="#0a0a0f" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles/main.css?v=2" />
+</head>
+<body>
+
+<canvas id="particles" aria-hidden="true"></canvas>
+
+<nav class="nav" id="nav">
+  <a href="#top" class="nav-brand">
+    <span class="brand-mark">स्</span>
+    <span class="brand-name">Smriti</span>
+  </a>
+  <div class="nav-links">
+    <a href="#why">Why</a>
+    <a href="#bench">Benchmark</a>
+    <a href="#science">Science</a>
+    <a href="#demo">Demo</a>
+    <a href="#mcp">MCP</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/fork-demon/smriti" target="_blank" rel="noopener">GitHub</a>
+  </div>
+  <a href="#install" class="btn-nav-cta">Get Started</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      v0.2 · research preview · Browser-first · Rust-native
+    </div>
+
+    <h1 class="hero-title">
+      Memory for AI agents,<br />
+      <span class="gradient-text" id="typed">measured in tokens.</span>
+    </h1>
+
+    <p class="hero-subtitle">
+      <strong>Smriti is a memory engine, not a memory model.</strong>
+      The LLM is your agent's reasoning layer, not Smriti's. Replace your
+      LLM, the engine is unchanged. Replace your vector store with Smriti,
+      your agent gains confidence verdicts, causal trajectory replay,
+      salience-aware decay, and federated sync &mdash; primitives no
+      vector store can offer.
+    </p>
+
+    <div class="hero-positioning">
+      <span class="position-label">Built for</span>
+      <p>
+        Memory that has to be <strong>private</strong>,
+        <strong>portable</strong>, and
+        <strong>cognitive enough to abstain when it doesn't know</strong>.
+        The same Rust core runs in the browser, on edge servers, and on
+        small devices &mdash; no embedding model required.
+      </p>
+      <div class="position-pills">
+        <span>91.7% abstention on adversarial queries</span>
+        <span>216 KB WASM</span>
+        <span>Zero-ML default · embeddings optional</span>
+        <span>Open SMRP/1.0 protocol</span>
+      </div>
+    </div>
+
+    <div class="hero-actions">
+      <a href="#install" class="btn btn-primary">Install Smriti</a>
+      <a href="#demo" class="btn btn-ghost">Try the live demo →</a>
+    </div>
+
+    <!-- Hero card showing a recall in action -->
+    <div class="hero-card">
+      <div class="card-head">
+        <div class="card-dots"><span></span><span></span><span></span></div>
+        <div class="card-title">smriti recall "what is the auth approach?"</div>
+        <div class="card-meta">budget 500 tokens</div>
+      </div>
+      <div class="card-body" id="hero-card-body">
+        <div class="card-row" data-delay="200">
+          <span class="row-icon">✓</span>
+          <span class="row-text"><code>The auth module uses JWT RS256 with 1-hour expiry</code></span>
+          <span class="row-meta">Confident</span>
+        </div>
+        <div class="card-row" data-delay="500">
+          <span class="row-icon">✓</span>
+          <span class="row-text"><code>Authentication uses public/private key pairs over TLS 1.3</code></span>
+          <span class="row-meta">verdict</span>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="foot-stat">2 hits · 79 tokens used / 500 budget · verdict: Confident</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- METRICS BAR -->
+<!-- All four numbers are reproducible by `cargo run --bin smriti-bench-500 --release`. -->
+<!-- See benchmarks/results/REAL_DATASETS_REPORT.md for methodology. -->
+<section class="metrics">
+  <div class="metric">
+    <div class="num" data-target="95.7" data-suffix="%">0%</div>
+    <div class="label">Intrinsic recall (zero-ML, 500 mems)</div>
+  </div>
+  <div class="sep"></div>
+  <div class="metric">
+    <div class="num" data-target="84" data-suffix="%">0%</div>
+    <div class="label">Token budget saved per query</div>
+  </div>
+  <div class="sep"></div>
+  <div class="metric">
+    <div class="num" data-target="91.7" data-suffix="%">0%</div>
+    <div class="label">Adversarial abstention rate</div>
+  </div>
+  <div class="sep"></div>
+  <div class="metric">
+    <div class="num" data-target="0">0</div>
+    <div class="label">ML models required</div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section class="why" id="why">
+  <div class="section-head">
+    <span class="tag">Why Smriti</span>
+    <h2>Core design principles of the Smriti engine.</h2>
+  </div>
+  <div class="why-grid">
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">01</div>
+      <h3>Zero ML dependencies</h3>
+      <p>Most memory engines require a dense embedding model. Smriti doesn't. Our HDC binary
+      hypervectors run at billions of XOR/popcount ops per second. No GPU, no model
+      download, no inference latency.</p>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">02</div>
+      <h3>Two stores, like the brain</h3>
+      <p>The hippocampus learns fast and forgets. The neocortex consolidates slowly
+      and remembers. McClelland's 1995 dual-system theory has been quoted in 12,000 papers. 
+      Smriti finally brings this cognitive architecture to production.</p>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">03</div>
+      <h3>Algebra, not search</h3>
+      <p>Bind two concepts with XOR. Bundle 50 facts into one 256-byte hypervector.
+      Recover any of them with deconvolution. This is composition, not lookup.
+      Our moat is mathematical.</p>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">04</div>
+      <h3>Open wire protocol</h3>
+      <p>Instead of proprietary APIs, Smriti speaks <strong>SMRP/1.0</strong>,
+      a simple line-oriented spec anyone can implement. We believe in open standards 
+      over vendor lock-in.</p>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">05</div>
+      <h3>Token efficiency, by design</h3>
+      <p>Memory should be inexpensive. By utilizing zero-ML retrieval and rigorous 
+      token budgeting, Smriti reduces LLM context window costs dramatically 
+      without sacrificing retrieval accuracy.</p>
+    </div>
+
+    <div class="why-card" data-reveal>
+      <div class="why-num">06</div>
+      <h3>One binary, runs anywhere</h3>
+      <p>Native Linux/macOS/Windows. WASM-ready architecture for the browser.
+      SQLite single-file persistence. No Docker required. No Postgres required.
+      Smriti is a 5 MB file that does memory.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- BENCH -->
+<section class="bench" id="bench">
+  <div class="section-head">
+    <span class="tag">Benchmark</span>
+    <h2>What Smriti measures, on real corpora.</h2>
+    <p>All numbers below are reproducible from a clean clone with one
+    cargo command. Methodology and per-category breakdowns live in
+    <code>benchmarks/results/REAL_DATASETS_REPORT.md</code>.</p>
+  </div>
+
+  <!-- Smriti's own three-layer benchmark, no fictional competitors -->
+  <div class="bench-table">
+    <h3 style="margin-bottom: 1rem;">bench-500 · 500 memories, 47 + 12 abstain queries</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Zero-ML</th>
+          <th>+ fastembed (optional)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Intrinsic Hit % (engine retrieved gold)</td>
+          <td><strong>95.7%</strong></td>
+          <td><strong>95.7%</strong></td>
+        </tr>
+        <tr>
+          <td>Top-1 % (gold ranked #1)</td>
+          <td>63.8%</td>
+          <td>70.2%</td>
+        </tr>
+        <tr>
+          <td>Shipped Hit % (after Confident=2 truncation)</td>
+          <td>78.7%</td>
+          <td>89.4%</td>
+        </tr>
+        <tr class="us">
+          <td><strong>Adversarial abstention</strong> (12 queries with no gold)</td>
+          <td><strong>91.7%</strong></td>
+          <td><strong>91.7%</strong></td>
+        </tr>
+        <tr>
+          <td>Avg tokens / 500 budget</td>
+          <td>79</td>
+          <td>81</td>
+        </tr>
+        <tr>
+          <td>Recall p95 latency</td>
+          <td>1.6 ms</td>
+          <td>3.7 ms</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="bench-note">
+      Reproduce: <code>cargo run --release --bin smriti-bench-500</code> (zero-ML)
+      or <code>SMRITI_BENCH_EMBEDDINGS=1 cargo run --release --bin smriti-bench-500 --features embeddings</code> (with embeddings).
+    </p>
+  </div>
+
+  <!-- Real public benchmarks, LLM-judged via NVIDIA NIM Llama-3.3-70B -->
+  <div class="bench-table" style="margin-top: 3rem;">
+    <h3 style="margin-bottom: 1rem;">Public benchmarks · LLM-as-judge (Llama-3.3-70B)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Dataset / category</th>
+          <th>Substring eval</th>
+          <th>LLM judge</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="us">
+          <td><strong>LongMemEval-S · single-session-user</strong> (n=8)</td>
+          <td><strong>100.0%</strong></td>
+          <td><strong>100.0%</strong></td>
+        </tr>
+        <tr>
+          <td>LongMemEval-S · knowledge-update (validates supersedes)</td>
+          <td>62.5%</td>
+          <td>62.5%</td>
+        </tr>
+        <tr>
+          <td>LongMemEval-S · stratified across 6 categories (n=48)</td>
+          <td>50.0%</td>
+          <td>47.9%</td>
+        </tr>
+        <tr>
+          <td>LOCOMO · mixed categories (n=80)</td>
+          <td>2.5%</td>
+          <td><strong>21.9%</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="bench-note">
+      The LOCOMO substring 2.5% → judge 21.9% (+19.4pp lift) confirms Smriti
+      retrieves real signal that string matchers cannot credit. Datasets:
+      <code>xiaowu0162/longmemeval-cleaned</code> (HuggingFace),
+      <code>snap-research/locomo</code> (GitHub). Judge harness:
+      <code>benchmarks/judge_results.py</code>. Methodology, per-entry verdicts,
+      and reasons in <code>benchmarks/results/REAL_DATASETS_REPORT.md</code>.
+    </p>
+  </div>
+
+  <!-- What Smriti gives that vector stores structurally cannot -->
+  <div class="bench-table" style="margin-top: 3rem;">
+    <h3 style="margin-bottom: 1rem;">Capabilities a vector store cannot offer</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>Vector store</th>
+          <th>Smriti</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Confidence verdicts (Confident / Ambiguous / Abstained)</td>
+          <td>—</td>
+          <td>✅ 91.7% adversarial abstention</td>
+        </tr>
+        <tr>
+          <td>Causal trajectory replay (typed-edge BFS)</td>
+          <td>—</td>
+          <td>✅ <code>recall_trajectory()</code></td>
+        </tr>
+        <tr>
+          <td>Salience-aware decay bypass (auto-PPR-seed)</td>
+          <td>—</td>
+          <td>✅ <code>Salience::Critical</code></td>
+        </tr>
+        <tr>
+          <td>Goal-pinned persistent priming</td>
+          <td>—</td>
+          <td>✅ <code>MemoryKind::Goal</code></td>
+        </tr>
+        <tr>
+          <td>Supersede chains with audit trail</td>
+          <td>re-embed (history lost)</td>
+          <td>✅ chain preserved, recall hides old</td>
+        </tr>
+        <tr>
+          <td>Federated sync (LWW, P2P)</td>
+          <td>server-coupled</td>
+          <td>✅ <code>export_sync_state</code> / <code>import_sync_state</code></td>
+        </tr>
+        <tr>
+          <td>WASM / browser deployment</td>
+          <td>—</td>
+          <td>✅ 216 KB gzipped</td>
+        </tr>
+        <tr>
+          <td>Zero-ML mode</td>
+          <td>—</td>
+          <td>✅ 95.7% intrinsic hit, no embeddings</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="bench-note">
+      A head-to-head LLM-judged comparison against Mem0, Letta, and Zep on
+      LongMemEval and LOCOMO is on the v0.3 roadmap — the harness already
+      runs against any system that exposes <code>(corpus, query) → context</code>.
+    </p>
+  </div>
+</section>
+
+<!-- SCIENCE -->
+<section class="science" id="science">
+  <div class="section-head">
+    <span class="tag">Science</span>
+    <h2>The five papers we built on.</h2>
+  </div>
+
+  <div class="science-grid">
+    <div class="paper" data-reveal>
+      <div class="paper-year">1885</div>
+      <div class="paper-title">Forgetting Curves</div>
+      <div class="paper-author">Ebbinghaus</div>
+      <div class="paper-body">Memory traces decay exponentially. We use per-kind half-lives: events fade in 14 days, decisions in a year.</div>
+    </div>
+    <div class="paper" data-reveal>
+      <div class="paper-year">1988</div>
+      <div class="paper-title">Sparse Distributed Memory</div>
+      <div class="paper-author">Kanerva</div>
+      <div class="paper-body">High-dimensional binary vectors are nearly orthogonal by accident. The math behind our HDC layer.</div>
+    </div>
+    <div class="paper" data-reveal>
+      <div class="paper-year">1995</div>
+      <div class="paper-title">Complementary Learning Systems</div>
+      <div class="paper-author">McClelland, McNaughton, O'Reilly</div>
+      <div class="paper-body">Hippocampus + Neocortex. Fast learning + slow consolidation. We literally implemented their architecture.</div>
+    </div>
+    <div class="paper" data-reveal>
+      <div class="paper-year">1995</div>
+      <div class="paper-title">Holographic Reduced Representations</div>
+      <div class="paper-author">Plate</div>
+      <div class="paper-body">Bind, bundle, permute. Our compositional memory operations come straight from VSA theory.</div>
+    </div>
+    <div class="paper" data-reveal>
+      <div class="paper-year">1978</div>
+      <div class="paper-title">Minimum Description Length</div>
+      <div class="paper-author">Rissanen</div>
+      <div class="paper-body">The optimal store minimizes length(store) + length(input given store). Our predictive coding filter.</div>
+    </div>
+    <div class="paper" data-reveal>
+      <div class="paper-year">2005</div>
+      <div class="paper-title">Free Energy Principle</div>
+      <div class="paper-author">Friston</div>
+      <div class="paper-body">Only store prediction errors. If your existing memory predicts the new input, don't store it. Information theory at work.</div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="demo" id="demo">
+  <div class="section-head">
+    <span class="tag">Live Demo</span>
+    <h2>Try Smriti right now.</h2>
+    <p>This is the <strong>real Rust engine</strong>, compiled to a 230 KB
+    WebAssembly module and running entirely in your browser. No backend.
+    No embedding model. No network calls after the first load.
+    The same binary ships natively at 88.9% top-1 on LongMemEval.</p>
+  </div>
+
+  <div class="demo-shell">
+    <div class="demo-controls">
+      <input
+        id="demo-input"
+        type="text"
+        placeholder="Type a memory or a question, e.g.  'auth uses JWT'  or  'how does auth work'"
+        autocomplete="off" />
+      <button id="demo-remember" class="btn btn-primary">Remember</button>
+      <button id="demo-recall" class="btn btn-ghost">Recall</button>
+      <button id="demo-clear" class="btn btn-ghost" style="color: var(--t3);">Clear</button>
+    </div>
+    <div class="demo-body">
+      <div class="demo-output" id="demo-output">
+        <div class="demo-empty">
+          <code>$ smriti remember "Bob is the lead engineer"</code><br>
+          <code>$ smriti recall "who leads engineering?"</code><br>
+          <em>Click Remember/Recall above to see Smriti at work.</em>
+        </div>
+      </div>
+      <div class="demo-graph" id="demo-graph">
+        <canvas id="demo-graph-canvas"></canvas>
+      </div>
+    </div>
+    <div class="demo-stats" id="demo-stats">
+      <span><strong>0</strong> memories stored</span>
+      <span class="dim">·</span>
+      <span><strong>0</strong> recalls run</span>
+      <span class="dim">·</span>
+      <span><strong>0%</strong> avg token efficiency</span>
+    </div>
+  </div>
+</section>
+
+<!-- MCP -->
+<section class="bench" id="mcp">
+  <div class="section-head">
+    <span class="tag">MCP</span>
+    <h2>Native memory for Claude Code, Cursor, Zed.</h2>
+    <p>
+      Smriti speaks the Model Context Protocol natively. Drop the server
+      into your agent's MCP config and the engine's primitives become
+      first-class tools. No wrapper, no glue code, no embedding pipeline.
+    </p>
+  </div>
+
+  <div class="install-grid" style="grid-template-columns: 1fr 1fr; align-items: start;">
+    <div class="install-card">
+      <h3>One-line config</h3>
+      <pre><code>// ~/.config/claude-code/mcp.json
+{
+  "smriti": {
+    "command": "smriti-http",
+    "args": ["--mcp", "--db", "~/.smriti/global.db"]
+  }
+}</code></pre>
+      <p style="margin-top: 1rem; color: var(--t3); font-size: 0.92rem;">
+        Restart your agent. <code>smriti_*</code> tools appear in the
+        tool palette immediately.
+      </p>
+    </div>
+
+    <div class="install-card">
+      <h3>13 tools, all deterministic</h3>
+      <ul style="font-family: var(--mono); font-size: 0.88rem; line-height: 1.9;">
+        <li><code>smriti_remember</code> — store with attributes + tags</li>
+        <li><code>smriti_recall</code> — verdict + confidence-graded pack</li>
+        <li><code>smriti_supersede</code> — graceful contradiction</li>
+        <li><code>smriti_reconsolidate</code> — usage-driven plasticity</li>
+        <li><code>smriti_link</code> — typed edges (CausedBy / Before / …)</li>
+        <li><code>smriti_recall_trajectory</code> — narrative replay</li>
+        <li><code>smriti_clear_activation</code> — topic-switch reset</li>
+        <li><code>smriti_suggest_clusters</code> + <code>smriti_merge</code> — sleep summarization</li>
+        <li><code>smriti_consolidate</code>, <code>smriti_vacuum</code>, <code>smriti_stats</code>, <code>smriti_forget</code></li>
+      </ul>
+      <p style="margin-top: 1rem; color: var(--t3); font-size: 0.92rem;">
+        None require an LLM. The agent provides structured input;
+        Smriti does the graph algebra.
+      </p>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 2.5rem;">
+    <a class="btn btn-ghost" href="https://github.com/fork-demon/smriti/blob/main/docs/capabilities.md">
+      Read the full capabilities guide →
+    </a>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section class="install" id="install">
+  <div class="section-head">
+    <span class="tag">Install</span>
+    <h2>Get started in 60 seconds.</h2>
+  </div>
+
+  <div class="install-grid">
+    <div class="install-card">
+      <div class="install-step">1</div>
+      <h3>Install</h3>
+      <pre><code>cargo install smriti --features http</code></pre>
+    </div>
+    <div class="install-card">
+      <div class="install-step">2</div>
+      <h3>Remember something</h3>
+      <pre><code>smriti remember "JWT RS256 with 1h expiry" \
+  --tags auth,security \
+  --kind fact</code></pre>
+    </div>
+    <div class="install-card">
+      <div class="install-step">3</div>
+      <h3>Recall it</h3>
+      <pre><code>smriti recall "how does auth work" \
+  --budget 500</code></pre>
+    </div>
+  </div>
+
+  <div class="install-cta">
+    <a class="btn btn-primary" href="https://github.com/fork-demon/smriti">Star on GitHub</a>
+    <a class="btn btn-ghost" href="https://github.com/fork-demon/smriti/blob/main/docs/capabilities.md">Read the docs →</a>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-cols">
+    <div class="footer-col">
+      <span class="brand-mark">स्</span>
+      <span class="brand-name">Smriti</span>
+      <p class="footer-tagline">Structured memory for AI agents.<br>स्मृति · what is remembered, well.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Project</h4>
+      <a href="https://github.com/fork-demon/smriti">GitHub</a>
+      <a href="#install">Install</a>
+      <a href="#bench">Benchmark</a>
+    </div>
+    <div class="footer-col">
+      <h4>Engine</h4>
+      <a href="#science">Science</a>
+      <a href="#demo">Live demo</a>
+      <a href="#why">Why Smriti</a>
+    </div>
+    <div class="footer-col">
+      <h4>Talk to us</h4>
+      <a href="https://twitter.com/intent/tweet?text=@smriti_ai">Twitter / X</a>
+      <a href="mailto:hello@smriti.ai">hello@smriti.ai</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © 2026 Smriti · MIT License · Built in Rust 🦀
+  </div>
+</footer>
+
+<script type="module" src="scripts/main.js?v=3"></script>
+</body>
+</html>

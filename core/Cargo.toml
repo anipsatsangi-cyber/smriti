@@ -84,6 +84,14 @@ name = "smriti-bench-500"
 path = "src/bin/smriti-bench-500.rs"
 required-features = ["native"]
 
+# Continuity benchmark: measures the lift from spreading-activation
+# priming on correlated multi-query bursts. Cold (clear_activation
+# before each query) vs primed (clear only between burst topics).
+[[bin]]
+name = "smriti-bench-continuity"
+path = "src/bin/smriti-bench-continuity.rs"
+required-features = ["native"]
+
 [[bin]]
 name = "smriti-http"
 path = "src/bin/smriti-http.rs"
