@@ -82,6 +82,7 @@ fn test_long_conversation_agi_features() {
     }
     
     // We expect the trajectory to trace from the Bug -> to the CPU Spike
+    // simple AGI directed assert
     assert!(trajectory.iter().any(|n| n.id == cpu_spike_id));
 
     // 6. CLEAR CONTEXT
