@@ -581,7 +581,8 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
 /* ── Bench ── */
 
 .bench-table {
-  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
 }
 .bench-table table {
   width: 100%;

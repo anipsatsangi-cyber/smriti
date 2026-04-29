@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles/main.css?v=5" />
+<link rel="stylesheet" href="styles/main.css?v=6" />
 </head>
 <body>
 
@@ -198,10 +198,7 @@
   </div>
 
   <!-- Smriti's own three-layer benchmark, no fictional competitors -->
-  <div class="slider-grid" style="padding-top: 1rem;">
-  
-  <div class="slider-card bench-card">
-    <div class="bench-table">
+  <div class="bench-table">
     <h3 style="margin-bottom: 1rem;">bench-500 · 500 memories, 47 + 12 abstain queries</h3>
     <table>
       <thead>
@@ -249,11 +246,9 @@
       or <code>SMRITI_BENCH_EMBEDDINGS=1 cargo run --release --bin smriti-bench-500 --features embeddings</code> (with embeddings).
     </p>
   </div>
-  </div>
 
   <!-- Real public benchmarks, LLM-judged via NVIDIA NIM Llama-3.3-70B -->
-  <div class="slider-card bench-card">
-    <div class="bench-table">
+  <div class="bench-table" style="margin-top: 3rem;">
     <h3 style="margin-bottom: 1rem;">Public benchmarks · LLM-as-judge (Llama-3.3-70B)</h3>
     <table>
       <thead>
@@ -295,11 +290,9 @@
       and reasons in <code>benchmarks/results/REAL_DATASETS_REPORT.md</code>.
     </p>
   </div>
-  </div>
 
   <!-- What Smriti gives that vector stores structurally cannot -->
-  <div class="slider-card bench-card">
-    <div class="bench-table">
+  <div class="bench-table" style="margin-top: 3rem;">
     <h3 style="margin-bottom: 1rem;">Capabilities a vector store cannot offer</h3>
     <table>
       <thead>
@@ -357,8 +350,6 @@
       LongMemEval and LOCOMO is on the v0.3 roadmap — the harness already
       runs against any system that exposes <code>(corpus, query) → context</code>.
     </p>
-  </div>
-  </div>
   </div>
 </section>
 
@@ -625,7 +616,7 @@ smriti.consolidate()</code></pre>
     <div class="footer-col">
       <h4>Talk to us</h4>
       <a href="https://twitter.com/intent/tweet?text=@smriti_ai">Twitter / X</a>
-      <a href="mailto:hello@smriti.ai">hello@smriti.ai</a>
+      <a href="https://github.com/fork-demon/smriti/discussions">GitHub Discussions</a>
     </div>
   </div>
   <div class="footer-bottom">
