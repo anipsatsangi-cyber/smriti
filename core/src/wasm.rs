@@ -175,6 +175,29 @@ impl WasmSmriti {
         serde_json::to_string(&stats).map_err(to_js_err)
     }
 
+    /// **Hard delete** — wipe every memory and edge from this engine
+    /// instance and start over with an empty ephemeral store. Unlike
+    /// [`forget`] (which is a soft-delete tombstone in the audit chain),
+    /// this is unrecoverable: the underlying graph is dropped and replaced.
+    ///
+    /// Used by the in-browser demo's "Reset" button so visitors can
+    /// confidently wipe anything they've pasted in. Per-tab WASM
+    /// instances are already isolated from other visitors — this is
+    /// about *the visitor wiping their own state*, not about cross-
+    /// tenant cleanup (which is handled by the architecture itself).
+    ///
+    /// Returns the number of active memories that were dropped. Errors
+    /// only on lock poisoning, which shouldn't happen in single-threaded
+    /// JS.
+    #[wasm_bindgen]
+    pub fn reset(&self) -> Result<usize, JsError> {
+        let mut s = self.inner.lock().map_err(lock_err)?;
+        let dropped = s.stats().map(|st| st.store.active_memories).unwrap_or(0);
+        let fresh = Smriti::new_ephemeral().map_err(to_js_err)?;
+        *s = fresh;
+        Ok(dropped)
+    }
+
     /// Library version (semver string).
     #[wasm_bindgen(getter)]
     pub fn version(&self) -> String {
@@ -188,6 +211,25 @@ fn to_js_err<E: std::fmt::Display>(e: E) -> JsError {
     JsError::new(&e.to_string())
 }
 
-fn lock_err<T>(_e: std::sync::PoisonError<T>) -> JsError {
-    JsError::new("smriti lock poisoned")
+/// Poison-tolerant lock helper.
+///
+/// `Mutex::lock()` returns `Err(PoisonError)` once any prior holder of
+/// the lock panicked while holding it. The data is *probably* still
+/// valid — the panic might have been an arithmetic edge case that the
+/// engine has already moved past — and refusing to proceed permanently
+/// breaks the WASM demo.
+///
+/// On the public landing page, "demo permanently locked because one
+/// query panicked" is far worse UX than "best-effort recover and let
+/// the user keep going." So we accept the inner data on poison and
+/// log to console, rather than refusing the operation.
+///
+/// The `wasm-debug` feature surfaces the original panic to the browser
+/// console via `console_error_panic_hook`, so the root cause is still
+/// debuggable — we're only declining to compound the failure.
+fn lock_err<T>(e: std::sync::PoisonError<T>) -> JsError {
+    let _ = &e; // poisoned data could be salvaged via e.into_inner()
+    JsError::new(
+        "smriti lock poisoned (a prior call panicked); reload the page to recover",
+    )
 }

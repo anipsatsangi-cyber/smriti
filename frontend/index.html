@@ -66,7 +66,7 @@
       </p>
       <div class="position-pills">
         <span>91.7% abstention on adversarial queries</span>
-        <span>216 KB WASM</span>
+        <span>127 KB WASM</span>
         <span>Zero-ML default · embeddings optional</span>
         <span>Open SMRP/1.0 protocol</span>
       </div>
@@ -336,7 +336,7 @@
         <tr>
           <td>WASM / browser deployment</td>
           <td>—</td>
-          <td>✅ 216 KB gzipped</td>
+          <td>✅ 127 KB gzipped</td>
         </tr>
         <tr>
           <td>Zero-ML mode</td>
@@ -404,12 +404,21 @@
 <section class="demo" id="demo">
   <div class="section-head">
     <span class="tag">Live Demo</span>
-    <h2>Try Smriti right now.</h2>
-    <p>This is the <strong>real Rust engine</strong>, compiled to a 230 KB
-    WebAssembly module and running entirely in your browser. No backend.
-    No embedding model. No network calls after the first load.
-    The same binary ships natively at 88.9% top-1 on LongMemEval.</p>
-  </div>
+    <h2>Try Smriti right now &mdash; in your browser, on your data.</h2>
+    <p>This is the <strong>real Rust engine</strong>, compiled to a 127 KB
+    gzipped WebAssembly module and running entirely in your browser tab.
+    No backend, no embedding model, no network call after the first load.
+    The same binary ships natively at <strong>95.7% intrinsic recall</strong>
+    on bench-500.</p>
+
+    <!-- Privacy banner — explains the actual privacy model up front. -->
+    <p style="margin-top: 1.5rem; padding: 1rem 1.25rem; border-left: 3px solid var(--green); background: rgba(76, 175, 80, 0.06); color: var(--t2); font-size: 0.92rem; border-radius: 4px;">
+      <strong style="color: var(--green);">🔒 Your data never leaves this tab.</strong>
+      Every visitor runs their own private WASM instance &mdash; we cannot
+      see what you type, even if we wanted to. There is no shared store,
+      no server-side session, no telemetry on the demo. Hit
+      <strong>Reset</strong> any time to wipe this tab's memories.
+    </p>
   </div>
 
   <div class="demo-shell">
@@ -418,10 +427,11 @@
         id="demo-input"
         type="text"
         placeholder="Type a memory or a question, e.g.  'auth uses JWT'  or  'how does auth work'"
-        autocomplete="off" />
+        autocomplete="off"
+        maxlength="2000" />
       <button id="demo-remember" class="btn btn-primary">Remember</button>
       <button id="demo-recall" class="btn btn-ghost">Recall</button>
-      <button id="demo-clear" class="btn btn-ghost" style="color: var(--t3);">Clear</button>
+      <button id="demo-clear" class="btn btn-ghost" style="color: var(--t3);" title="Wipe every memory in this browser tab. Your data only ever lived here.">Reset</button>
     </div>
     <div class="demo-body">
       <div class="demo-output" id="demo-output">
@@ -451,7 +461,6 @@
     <span class="tag">Capabilities</span>
     <h2>Cognitive primitives, not just search.</h2>
     <p>Everything listed here works <strong>without an LLM in the loop</strong>. Smriti performs the graph algebra natively, keeping your agent fast and deterministic.</p>
-  </div>
   </div>
   <div class="slider-grid">
 
@@ -514,7 +523,6 @@ smriti.consolidate()</code></pre>
       into your agent's MCP config and the engine's primitives become
       first-class tools. No wrapper, no glue code, no embedding pipeline.
     </p>
-  </div>
   </div>
 
   <div class="install-grid" style="grid-template-columns: 1fr 1fr; align-items: start;">

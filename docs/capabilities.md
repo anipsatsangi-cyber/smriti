@@ -668,6 +668,6 @@ let r = s.recall("what did I deploy")
 | P2P sync (LWW)                   | `sync_state_roundtrip_lww` test                                                   |
 | Token-budget MMR                 | bench-500: 0.0% duplicate hit rate                                                |
 
-**83 unit tests + 1 integration test, all green.** WASM build at 216 KB gzipped. p95 recall at 1.6 ms on 500 memories.
+**83 unit tests + 1 integration test, all green.** WASM build at 127 KB gzipped. p95 recall at 1.6 ms on 500 memories.
 
 For the live numbers and the cold-vs-primed continuity benchmark, see [`benchmarks/results/REAL_DATASETS_REPORT.md`](../benchmarks/results/REAL_DATASETS_REPORT.md) and run `cargo run --release --bin smriti-bench-500`.

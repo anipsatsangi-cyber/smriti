@@ -311,6 +311,15 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
 .hero-title {
   max-width: 820px;
   font-weight: 900;
+  /* Reserve enough vertical space for the typewriter span to grow to its
+     longest phrase without bumping the heading from N lines to N+1 lines.
+     Without this, every keystroke of the typing animation could shift the
+     entire page below the hero up or down by ~80px. We pick a min-height
+     a touch larger than the *largest* phrase in initTyping() at the
+     wrapping width browsers actually use here. Keeps the visual hierarchy
+     stable while preserving the animation. */
+  min-height: 4.4em;
+  line-height: 1.05;
 }
 .gradient-text {
   background: var(--gradient);
@@ -319,6 +328,18 @@ section.hero { padding-top: 140px; padding-bottom: 60px; }
   background-clip: text;
   color: transparent;
   animation: gradient-shift 6s var(--ease) infinite;
+  /* Inline-block so the typed span occupies a layout box of stable height
+     even when its text content is mid-deletion (and could otherwise be
+     0 chars wide for one frame). Combined with the heading's min-height,
+     this fully arrests the page jitter caused by the typewriter. */
+  display: inline-block;
+  min-height: 1.1em;
+  vertical-align: baseline;
+}
+@media (min-width: 720px) {
+  /* On wider viewports the heading wraps at 2 lines for nearly every
+     phrase, so we can tighten the reserved height. */
+  .hero-title { min-height: 2.4em; }
 }
 @keyframes gradient-shift {
   0%,100% { background-position: 0% 50%; }

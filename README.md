@@ -9,7 +9,7 @@
 
 ```
 ╔════════════════════════════════════════════════════════════╗
-║  500 mems · zero-ML · MIT · 83 tests · WASM 216 KB gz      ║
+║  500 mems · zero-ML · MIT · 83 tests · WASM 127 KB gz      ║
 ║                                                            ║
 ║  Recall avg : 1.2 ms                                       ║
 ║  Recall p95 : 1.6 ms                                       ║
@@ -26,7 +26,7 @@
 
 Most "memory for agents" products are vector databases plus a wrapper. They do one thing: nearest-neighbor lookup over embeddings. Smriti is built on the assumption that **a useful memory engine for agents must be cognitive, not just searchable.** Concretely, that means it has to do five things vector stores cannot:
 
-1. **Run without ML dependencies** so it ships in a 216 KB gzipped WASM bundle and runs in a browser tab, on a Raspberry Pi, or on a 4 GB ARM edge device. Embeddings are an *optional feature flag*, not a hard dependency.
+1. **Run without ML dependencies** so it ships in a 127 KB gzipped WASM bundle and runs in a browser tab, on a Raspberry Pi, or on a 4 GB ARM edge device. Embeddings are an *optional feature flag*, not a hard dependency.
 2. **Surface confidence**, not just rank. Every recall returns a verdict (`Confident`, `AmbiguousLeader`, `UnsupportedTop`, `LowConfidence`, `Abstained`) and **abstains correctly on 91.7% of adversarial queries** — questions whose gold answer is not in the corpus. Vector DBs return their nearest neighbor regardless.
 3. **Carry context across queries.** A real agent loop has correlated questions. Smriti's spreading-activation primes related subgraphs so follow-up queries are cheaper and more accurate. Pure-vector systems are stateless.
 4. **Track provenance and supersede chains.** When a fact gets corrected, Smriti's recall surfaces the latest version while preserving the audit trail. Vector DBs collapse that distinction into "store the new embedding."
@@ -102,7 +102,7 @@ Smriti reports three independent measurements. Conflating them is the most commo
 
 | Metric                            | Value  |
 | --------------------------------- | ------ |
-| WASM gzipped                      | 216 KB |
+| WASM gzipped                      | 127 KB |
 | Cold recall (HTTP path, 12 mems)  | 6.5 ms |
 | Warm recall avg / p95             | 6.0 / 7.4 ms |
 | Duplicate hit rate                | 0%     |

@@ -482,10 +482,39 @@ async function initLiveDemo() {
   }
   tickGraph();
 
+  // ── Soft caps for the public demo ──
+  // The engine itself has no per-memory length limit and no max-memory
+  // ceiling — those are policies the application sets. For the public
+  // landing-page demo, we want to keep a hostile or careless visitor
+  // from tanking their *own* browser tab (and screenshot-shaming us
+  // with "Smriti is broken"). These caps don't affect the library;
+  // they only apply to this in-browser sandbox.
+  const MAX_MEMORY_TEXT_CHARS = 2000;   // single-memory length cap
+  const MAX_DEMO_MEMORIES     = 200;    // total-memory cap per tab
+
   // ── Remember handler — calls real WASM ──
   rememberBtn.addEventListener('click', () => {
     const text = input.value.trim();
     if (!text) return;
+
+    // Cap 1: per-memory text length.
+    if (text.length > MAX_MEMORY_TEXT_CHARS) {
+      appendLine(
+        `<span style="color:var(--yellow)">demo limit</span> · single memory capped at ${MAX_MEMORY_TEXT_CHARS} chars in this sandbox · self-host Smriti for unbounded text`,
+        'note'
+      );
+      return;
+    }
+
+    // Cap 2: total memories in this tab.
+    if (memories.length >= MAX_DEMO_MEMORIES) {
+      appendLine(
+        `<span style="color:var(--yellow)">demo limit</span> · ${MAX_DEMO_MEMORIES} memories max in this sandbox · use Reset to start over, or self-host for unbounded growth`,
+        'note'
+      );
+      return;
+    }
+
     try {
       // Reset pulses
       for (const n of nodes) n.activePulse = 0;
@@ -559,11 +588,63 @@ async function initLiveDemo() {
     }
   });
 
+  // ── Hard Reset ──
+  // The "Clear" button used to only wipe the output panel — leaving the
+  // underlying WASM store full of whatever the user had typed. That's
+  // misleading and a real privacy footgun: someone pastes confidential
+  // text, hits Clear, and walks away thinking it's gone. It isn't.
+  //
+  // The new behavior: wipe the entire engine via WasmSmriti.reset(),
+  // wipe the JS-side mirror used by the graph viz, re-seed the demo
+  // memories, and clear the output panel. The user gets a fresh slate.
+  //
+  // We still scope to a single browser tab — Smriti's WASM build is
+  // ephemeral by design (Smriti::new_ephemeral), so cross-visitor data
+  // bleed is architecturally impossible. Reset is for the user's own
+  // peace of mind.
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
-      output.innerHTML = '';
-      for (const n of nodes) n.activePulse = -0.5;
-      input.value = '';
+      // Soft confirm — short enough not to be annoying, blunt enough to
+      // make the privacy model legible.
+      const ok = confirm(
+        'Reset your local Smriti demo?\n\n' +
+        'This wipes every memory and edge in this browser tab.\n' +
+        'Your data only ever lived in this tab — nobody else can see it,\n' +
+        'including the Smriti team. This action is irreversible.'
+      );
+      if (!ok) return;
+
+      try {
+        const dropped = smriti.reset();
+        // Wipe the JS-side mirrors used by the graph viz.
+        memories.length = 0;
+        nodes.length = 0;
+        edges.length = 0;
+        idToNodeIdx.clear();
+        recalls = 0;
+        totalEfficiencySum = 0;
+        // Re-seed so the demo isn't visually empty.
+        for (const m of seedMemories) {
+          try {
+            const uuid = smriti.remember(m.text, m.kind, m.tags);
+            memories.push({ id: uuid, text: m.text });
+            addNode(uuid, m.text, tokenize(m.text));
+          } catch (_) { /* ignore seed errors on reset */ }
+        }
+        try { smriti.consolidate(); } catch (_) { /* ignore */ }
+        output.innerHTML = '';
+        appendLine(
+          `<span style="color:var(--green)">●</span> reset · dropped <strong>${dropped}</strong> memories · re-seeded with <strong>${seedMemories.length}</strong> demo facts`,
+          'ok'
+        );
+        input.value = '';
+        updateStats();
+      } catch (err) {
+        appendLine(
+          `<span style="color:var(--red)">error</span> · reset failed: ${escapeHtml(err.message || String(err))}`,
+          'note'
+        );
+      }
     });
   }
 
