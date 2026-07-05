@@ -53,14 +53,18 @@ impl SqliteStore {
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
         let conn = if path.to_string_lossy() == ":memory:" {
-            Connection::open_in_memory()?
+            let conn = Connection::open_in_memory()?;
+            conn.execute_batch("PRAGMA busy_timeout=5000;")?;
+            conn
         } else {
             if let Some(parent) = path.parent() {
                 if !parent.as_os_str().is_empty() {
                     std::fs::create_dir_all(parent).ok();
                 }
             }
-            Connection::open(path)?
+            let conn = Connection::open(path)?;
+            conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;")?;
+            conn
         };
 
         // Apply schema
