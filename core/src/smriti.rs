@@ -189,27 +189,15 @@ impl Smriti {
         if let Some(node) = self.neo.get_mut(new_id) {
             node.supersedes = Some(old_id);
             self.store.upsert(node)?;
+            }
+
+        // Update the hippocampal view for the two affected entries only.
+        // No need to drain and reinsert the entire buffer.
+        if let Some(entry) = self.hippo.get_mut(old_id) {
+            entry.node.superseded_by = Some(new_id);
         }
-        // Also update the hippocampal view if either memory is still there.
-        // We rebuild the hippocampus by draining + reinserting with the
-        // updated state.
-        let mut updated_entries: Vec<crate::core::hippocampus::EpisodicEntry> = self
-            .hippo
-            .drain_where(|_| true)
-            .into_iter()
-            .map(|mut e| {
-                if e.node.id == old_id {
-                    e.node.superseded_by = Some(new_id);
-                } else if e.node.id == new_id {
-                    e.node.supersedes = Some(old_id);
-                }
-                e
-            })
-            .collect();
-        // Reinsert in original order.
-        for e in updated_entries.drain(..) {
-            // Bypass insert's auto-eviction since we know order is unchanged.
-            self.hippo.insert(e.node);
+        if let Some(entry) = self.hippo.get_mut(new_id) {
+            entry.node.supersedes = Some(old_id);
         }
         // Persist the supersede chain.
         self.store.supersede(old_id, new_id)?;
@@ -285,11 +273,13 @@ impl Smriti {
             self.store.upsert(node)?;
         }
 
-        // Vacuum dead tombstones to keep the active graph dense and fast
-        // TODO: This runs unconditionally in O(N+E) time. On a hot path that consolidates
-        // frequently, this rebuild cost could spike p95 latency. Future optimization:
-        // Gate this with `if self.neo.tombstone_count() > THRESHOLD { self.neo.vacuum(); }`
-        self.neo.vacuum();
+        // Only vacuum when >25% of neocortex nodes are tombstones.
+        // Prevents O(N+E) petgraph rebuild on every consolidation.
+        let total = self.neo.len();
+        let active = self.neo.iter_active().count();
+        if total > 0 && (total - active) as f32 / total as f32 > 0.25 {
+            self.neo.vacuum();
+        }
 
         // Pre-warm dense cache for any newly-consolidated memories so the
         // first `recall()` after consolidation doesn't pay the embedding
