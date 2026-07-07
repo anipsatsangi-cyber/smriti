@@ -651,8 +651,12 @@ impl<'a> RecallBuilder<'a> {
         // Auto-augment query tags with NER-extracted entities from the
         // query text. This helps when the user asks an open-ended
         // question that didn't include explicit tags.
-        let extracted = crate::core::ner::extract_tags(&self.query);
-        let merged_tags = crate::core::ner::merge_tags(&self.tags, &extracted);
+        let merged_tags = if self.tags.is_empty() {
+            let extracted = crate::core::ner::extract_tags(&self.query);
+            crate::core::ner::merge_tags(&self.tags, &extracted)
+        } else {
+            self.tags.clone()
+        };
 
         // If embeddings are enabled, build a bridge that the recall
         // pipeline can call to compute cosine similarity per candidate.
