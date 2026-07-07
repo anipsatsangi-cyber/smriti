@@ -460,7 +460,7 @@ impl<'a> RememberBuilder<'a> {
             scope: Scope::default(),
             importance: 0.5,
             supersedes: None,
-            auto_tag: true,
+            auto_tag: false,
             attributes: std::collections::HashMap::new(),
         }
     }
