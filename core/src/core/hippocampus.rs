@@ -87,6 +87,11 @@ impl Hippocampus {
         self.entries.iter().find(|e| e.node.id == id)
     }
 
+    /// Look up an entry by id (mutable).
+    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut EpisodicEntry> {
+        self.entries.iter_mut().find(|e| e.node.id == id)
+    }
+    
     /// Remove an entry by id. Returns the entry if found.
     pub fn remove(&mut self, id: Uuid) -> Option<EpisodicEntry> {
         let pos = self.entries.iter().position(|e| e.node.id == id)?;
