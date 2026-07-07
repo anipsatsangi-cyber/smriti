@@ -58,6 +58,7 @@ pub struct Smriti {
     store: Arc<dyn Store>,
     /// Threshold for auto-consolidation: if hippo.len() >= this, we run a pass.
     auto_consolidate_threshold: usize,
+    last_consolidated: std::time::Instant,
     /// Optional dense-embedding layer (only present with `embeddings` feature).
     #[cfg(feature = "embeddings")]
     embedder: Option<Arc<crate::core::embeddings::Embedder>>,
